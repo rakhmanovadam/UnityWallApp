@@ -1,0 +1,14 @@
+# Environment & secrets — NEVER commit
+.env
+.env.*
+!.env.example
+
+# Build / deploy artifacts
+.vercel/
+node_modules/
+_screens/
+
+# Local dev
+.DS_Store
+*.log
+.tmp/

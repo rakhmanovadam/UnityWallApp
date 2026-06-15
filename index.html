@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF7F2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="UnityWall">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..700;1,400..600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles.css">
+<link rel="icon" type="image/jpeg" href="/assets/unitywall-logo.jpeg">
+<link rel="apple-touch-icon" href="/assets/unitywall-logo.jpeg">
+<title>UnityWall — A living wall, assembled by everyone in the room</title>
+</head>
+<body>
+
+<div id="stage" class="stage">
+  <main id="app" class="app" aria-live="polite"></main>
+
+  <nav id="devnav" class="devnav" aria-label="Screens">
+    <span class="devnav__title">UnityWall</span>
+    <div class="devnav__group">
+      <a href="/" data-tag="00">Home</a>
+      <a href="/join" data-tag="01">Join</a>
+      <a href="/join/MAYA-DANIEL" data-tag="02">Wall · QR</a>
+      <a href="/request" data-tag="03">Apply</a>
+      <a href="/dashboard" data-tag="04">Host</a>
+      <a href="/admin" data-tag="05">Admin</a>
+      <a href="/dashboard/slideshow" data-tag="06">Slideshow</a>
+      <a href="/dashboard/card" data-tag="07">Card</a>
+    </div>
+    <div class="devnav__hint">Path-based routes · SPA fallback via serve.py</div>
+  </nav>
+</div>
+
+<!-- ============== TEMPLATES ============== -->
+
+<!-- 00 · Home hub (/) -->
+<template id="t-home">
+  <section class="screen screen--scroll">
+    <div class="home__top">
+      <span class="brandmark brandmark--md home__mark"></span>
+      <h1 class="display home__h">Welcome to <em>UnityWall</em>.</h1>
+      <p class="lede home__lede">A shared photo wall for weddings &amp; events. Three doors — pick the one that's you.</p>
+    </div>
+
+    <a class="home-tile" href="/join">
+      <span class="kicker kicker--dusk">For guests</span>
+      <div class="home-tile__t">Join a wall</div>
+      <div class="home-tile__d">Got a join code? Step inside and start adding photos.</div>
+      <span class="home-tile__arrow">→</span>
+    </a>
+
+    <a class="home-tile home-tile--accent" href="/request">
+      <span class="kicker kicker--dusk">For venues &amp; planners</span>
+      <div class="home-tile__t">Use UnityWall for your own venue</div>
+      <div class="home-tile__d">Apply to host. We review every application by hand.</div>
+      <span class="home-tile__arrow">→</span>
+    </a>
+
+    <a class="home-tile home-tile--quiet" href="/dashboard">
+      <span class="kicker kicker--mute">For approved hosts</span>
+      <div class="home-tile__t">Host login</div>
+      <div class="home-tile__d">Sign in to manage your walls, the QR, and downloads.</div>
+      <span class="home-tile__arrow">→</span>
+    </a>
+
+    <div class="home__foot">
+      <span class="brandmark brandmark--xs"></span>
+      <span>Powered by UnityWall · support@unitywall.co</span>
+    </div>
+  </section>
+</template>
+
+<!-- 01 · Manual code entry (/join) -->
+<template id="t-join-manual">
+  <section class="screen screen--pad screen--col">
+    <span class="kicker kicker--dusk">Join a wall</span>
+    <h1 class="display display--med">Enter your code</h1>
+    <p class="lede">Find it on the table card, the invitation, or just under the QR.</p>
+
+    <form id="code-form" class="form">
+      <label class="label" for="join-code">Join code</label>
+      <div class="field field--code">
+        <input id="join-code" name="code" autocapitalize="characters" autocomplete="off" inputmode="text"
+               maxlength="14" placeholder="MAYA-DANIEL" required>
+      </div>
+      <p class="microcopy">No code? Ask the host. Or <a class="ulink" href="/">go back home</a>.</p>
+      <button type="submit" class="btn btn--primary" style="margin-top:18px;">Continue</button>
+    </form>
+
+    <div class="spacer"></div>
+    <p class="microcopy center">
+      Scanning a QR? It'll skip this step automatically.
+    </p>
+  </section>
+</template>
+
+<!-- 02 · QR landing / wall entry (/join/{CODE}) -->
+<template id="t-join">
+  <section class="screen screen--join">
+    <div class="join__top">
+      <span class="kicker kicker--mute">A shared wall</span>
+      <span class="kicker kicker--dusk join__brand">
+        <span class="brandmark brandmark--xs"></span>UnityWall
+      </span>
+    </div>
+    <div class="cover">
+      <div class="cover__art cover__art--01"></div>
+      <span class="cover__caption">— the first dance</span>
+    </div>
+    <div class="join__body">
+      <span class="kicker kicker--dusk" id="join-when">You're invited · 14 June 2026</span>
+      <h1 class="display" id="join-who">Maya <em>&amp;</em> Daniel</h1>
+      <p class="quote">Tonight belongs to <span id="join-couple">Maya &amp; Daniel</span>.<br>Help us remember it.</p>
+      <div class="spacer"></div>
+      <button class="btn btn--primary" data-action="goto" data-target="__JOIN__/email">
+        Add your photos <span class="arrow">→</span>
+      </button>
+      <div class="powered">
+        <span class="brandmark brandmark--xs"></span>
+        <span>Powered by UnityWall</span>
+      </div>
+    </div>
+  </section>
+</template>
+
+<!-- 02a · Email gate (/join/{CODE}/email) -->
+<template id="t-email">
+  <section class="screen screen--pad">
+    <span class="kicker kicker--dusk">Sign the guestbook</span>
+    <h1 class="display display--med">Leave your name<br>on the wall</h1>
+    <p class="lede">So <span id="email-couple">Maya &amp; Daniel</span> know whose eyes caught which moment.</p>
+    <form id="email-form" class="form" novalidate>
+      <label class="label" for="email">Your email</label>
+      <div class="field">
+        <input id="email" name="email" inputmode="email" autocomplete="email" type="email" placeholder="you@email.com" required>
+      </div>
+      <label class="optin" for="optin">
+        <input id="optin" name="optin" type="checkbox">
+        <span class="optin__box" aria-hidden="true"></span>
+        <span class="optin__text">Keep me posted with UnityWall stories and updates.</span>
+      </label>
+      <p class="microcopy">We only ever email about your photos. <a href="#" class="ulink">Privacy note</a></p>
+      <button type="submit" class="btn btn--primary" style="margin-top:22px;">Continue</button>
+    </form>
+  </section>
+</template>
+
+<!-- 02b · Verify (/join/{CODE}/verify) -->
+<template id="t-verify">
+  <section class="screen screen--pad screen--col">
+    <div class="brand-tile"></div>
+    <span class="kicker kicker--dusk" style="margin-top:32px;">Check your email</span>
+    <h1 class="display display--med">Enter your code</h1>
+    <p class="lede">We sent a six-digit code to <strong id="verify-email">your@email.com</strong></p>
+
+    <div class="otp" role="group" aria-label="Six digit code">
+      <input class="otp__cell" inputmode="numeric" maxlength="1" data-i="0" aria-label="Digit 1">
+      <input class="otp__cell" inputmode="numeric" maxlength="1" data-i="1" aria-label="Digit 2">
+      <input class="otp__cell" inputmode="numeric" maxlength="1" data-i="2" aria-label="Digit 3">
+      <input class="otp__cell" inputmode="numeric" maxlength="1" data-i="3" aria-label="Digit 4">
+      <input class="otp__cell" inputmode="numeric" maxlength="1" data-i="4" aria-label="Digit 5">
+      <input class="otp__cell" inputmode="numeric" maxlength="1" data-i="5" aria-label="Digit 6">
+    </div>
+
+    <div class="resend">
+      Didn't get it? <button type="button" class="ulink ulink--dusk" data-action="resend">Resend in <span id="resend-timer">0:24</span></button>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn btn--primary" data-action="goto" data-target="__JOIN__/welcome">Continue to the wall</button>
+    <div class="center microcopy" style="margin-top:14px;">
+      Wrong address? <a href="__JOIN__/email" class="link-strong">Edit email</a>
+    </div>
+  </section>
+</template>
+
+<!-- 02c · Onboarding (/join/{CODE}/welcome) -->
+<template id="t-onboarding">
+  <section class="screen screen--scroll">
+    <header class="ob__bar">
+      <div class="ob__brand">
+        <span class="brandmark brandmark--xs"></span>
+        <span class="kicker kicker--mute">Powered by UnityWall</span>
+      </div>
+      <a href="__JOIN__/upload" class="ob__skip">Skip →</a>
+    </header>
+
+    <article class="ob__intro" data-section="intro">
+      <div class="brand-tile brand-tile--sm"></div>
+      <h1 class="display display--sm">Welcome to the wall</h1>
+      <p class="ob__body">We help businesses, non-profits, and creatives build their whole digital presence — websites, maintenance, branding, and social media. This gallery is one of our builds.</p>
+
+      <div class="ob__how">
+        <div class="kicker kicker--mute">How to add your photos</div>
+        <div class="step"><span class="step__num">1</span><div><div class="step__t">Tap "Start uploading"</div><div class="step__d">Open your camera roll right here.</div></div></div>
+        <div class="step"><span class="step__num">2</span><div><div class="step__t">Pick your favorites</div><div class="step__d">A few candids or the whole night — your call.</div></div></div>
+        <div class="step"><span class="step__num">3</span><div><div class="step__t">Watch them land</div><div class="step__d">They fade onto the wall as they upload.</div></div></div>
+      </div>
+
+      <button class="btn btn--primary" data-action="goto" data-target="__JOIN__/upload">
+        Start uploading photos <span class="arrow">→</span>
+      </button>
+      <div class="ob__scroll">
+        Want to learn more about UnityWall?<br>
+        <span class="link-dusk">Scroll down ↓</span>
+      </div>
+    </article>
+
+    <article class="ob__about" data-section="about">
+      <span class="kicker kicker--dusk">About UnityWall</span>
+      <h2 class="title">More than just websites</h2>
+      <p class="ob__body">We build and maintain the full digital presence for the people who make great rooms — from first logo to last post.</p>
+
+      <div class="kicker kicker--mute" style="margin-top:24px;">Brands we've worked with</div>
+      <div class="brands">
+        <div class="brands__cell"><img src="/assets/partners/djq.png" alt="DJQ"></div>
+        <div class="brands__cell"><img src="/assets/partners/copper-to-gold.png" alt="Copper to Gold"></div>
+        <div class="brands__cell"><img src="/assets/partners/es-supper-club.png" alt="E's Supper Club"></div>
+        <div class="brands__cell"><img src="/assets/partners/ears-sun-gear.png" alt="Ears Sun Gear"></div>
+        <div class="brands__cell"><img src="/assets/partners/house-of-india.png" alt="House of India"></div>
+        <div class="brands__cell"><img src="/assets/partners/miguel-media.png" alt="Miguel Media"></div>
+        <div class="brands__cell"><img src="/assets/partners/collaborative-dev.png" alt="Collaborative Dev"></div>
+        <div class="brands__cell"><img src="/assets/partners/hotel-la-panoramica.png" alt="Hotel la Panoramica"></div>
+        <div class="brands__cell brands__cell--soon"><img src="/assets/partners/coming-soon.png" alt="More coming soon"></div>
+      </div>
+
+      <div class="callout">
+        Run a venue or plan weddings? You're exactly who we love building for.
+      </div>
+    </article>
+
+    <article class="ob__reach" data-section="reach_out">
+      <div class="reach__head">
+        <span class="kicker kicker--dusk">Send us a message</span>
+        <span class="badge badge--live"><span class="pulse"></span>Reply in under 1 hour</span>
+      </div>
+
+      <form id="reach-form" class="form form--reach" novalidate>
+        <div class="field"><input type="email" name="lead_email" placeholder="Your email" required></div>
+        <div class="field field--ta"><textarea name="lead_msg" rows="3" placeholder="Tell us what you're building…" required></textarea></div>
+        <button type="submit" class="btn btn--primary">Send message</button>
+      </form>
+
+      <p class="microcopy center">Prefer to talk? <strong>support@unitywall.co</strong> · (615) 424-3176</p>
+    </article>
+  </section>
+</template>
+
+<!-- 02d · Upload (/join/{CODE}/upload) -->
+<template id="t-upload">
+  <section class="screen screen--pad screen--col">
+    <span class="kicker kicker--dusk">Add to the wall</span>
+    <h1 class="display display--sm">Your photos</h1>
+
+    <label class="dropzone" for="file-input">
+      <input id="file-input" type="file" accept="image/*" multiple hidden>
+      <span class="dropzone__plus" aria-hidden="true">+</span>
+      <span class="dropzone__t">Tap to add photos</span>
+    </label>
+
+    <div class="upload__status">
+      <span id="upload-count">0 of 0 added to the wall</span>
+      <span class="kicker kicker--mute" id="upload-state">Idle</span>
+    </div>
+    <div class="upload__bar" aria-hidden="true"><div id="upload-bar-fill"></div></div>
+
+    <ul id="upload-list" class="upload__list" role="list"></ul>
+
+    <div class="spacer"></div>
+    <button class="btn btn--secondary" data-action="goto" data-target="__JOIN__/wall">View the wall</button>
+  </section>
+</template>
+
+<!-- 02e · The Wall (/join/{CODE}/wall) -->
+<template id="t-wall">
+  <section class="screen screen--wall">
+    <header class="wall__head">
+      <div>
+        <span class="kicker kicker--dusk" id="wall-couple-kicker">Maya &amp; Daniel</span>
+        <div class="wall__title">The Wall</div>
+      </div>
+      <span class="badge badge--here"><span class="pulse-dot"><span></span></span><span id="here-count">8</span> here now</span>
+    </header>
+
+    <div class="wall__layouts" role="tablist" aria-label="Gallery layout">
+      <button class="layout layout--on" data-layout="mosaic" role="tab" aria-selected="true">Mosaic</button>
+      <button class="layout" data-layout="feature" role="tab" aria-selected="false">Feature</button>
+      <button class="layout" data-layout="grid" role="tab" aria-selected="false">Grid</button>
+    </div>
+
+    <div id="wall-grid" class="wall__grid wall__grid--mosaic" data-layout="mosaic"></div>
+
+    <button class="fab" data-action="goto" data-target="__JOIN__/upload" aria-label="Add photos">+</button>
+  </section>
+</template>
+
+<!-- 03 · Venue application (/request) -->
+<template id="t-apply">
+  <section class="screen screen--scroll">
+    <header class="apply__head">
+      <span class="kicker kicker--dusk">Apply to host</span>
+      <h1 class="display display--sm">Tell us about your venue</h1>
+    </header>
+    <form id="apply-form" class="form form--apply" novalidate>
+      <div class="field-block"><label class="label">Venue / business name</label><div class="field"><input name="venue" placeholder="Copper to Gold" required></div></div>
+      <div class="field-block"><label class="label">Contact name</label><div class="field"><input name="contact" placeholder="Elena Cho" required></div></div>
+      <div class="field-block"><label class="label">Email</label><div class="field"><input name="email" type="email" placeholder="you@venue.co" required></div></div>
+      <div class="row-2">
+        <div class="field-block"><label class="label">Phone</label><div class="field"><input name="phone" placeholder="(615) 555-0148"></div></div>
+        <div class="field-block field-block--sm"><label class="label">Events / yr</label><div class="field"><input name="events" placeholder="40–60"></div></div>
+      </div>
+      <div class="field-block"><label class="label">Address</label><div class="field"><input name="address" placeholder="214 Hagan St, Nashville TN"></div></div>
+      <div class="field-block"><label class="label">Website</label><div class="field"><input name="website" placeholder="coppertogold.co"></div></div>
+      <div class="field-block"><label class="label">About your venue</label><div class="field field--ta"><textarea name="about" rows="3" placeholder="A restored 1920s foundry — weddings, dinners, and gallery nights."></textarea></div></div>
+
+      <label class="tos">
+        <input type="checkbox" name="tos" required>
+        <span class="tos__box"><span>✓</span></span>
+        <span class="tos__text">I agree to the <a class="ulink" href="#">Terms of Service</a> and hosting guidelines. <span class="req">Required</span></span>
+      </label>
+      <button type="submit" class="btn btn--primary">Submit application</button>
+    </form>
+  </section>
+</template>
+
+<!-- 03a · Submitted (/request/sent) -->
+<template id="t-submitted">
+  <section class="screen screen--center">
+    <div class="ring"><span></span></div>
+    <span class="kicker kicker--dusk" style="margin-top:30px;">Received · thank you</span>
+    <h1 class="display display--sm center">Your application<br>is under review</h1>
+    <p class="lede center">We read every one by hand — usually within a day. We'll email <strong id="apply-email">you</strong> the moment you're approved, with your QR and dashboard.</p>
+    <div class="pill"><span class="dot dot--amber"></span>QR withheld until approved</div>
+    <a class="microcopy" href="/" style="margin-top:36px;">← Back to home</a>
+    <div class="powered powered--sub">
+      <span class="brandmark brandmark--xs"></span>
+      <span>UnityWall</span>
+    </div>
+  </section>
+</template>
+
+<!-- 04 · Host login (/dashboard with no session) -->
+<template id="t-login-host">
+  <section class="screen screen--pad screen--col">
+    <span class="kicker kicker--dusk">Host login</span>
+    <h1 class="display display--med">Welcome back</h1>
+    <p class="lede">We'll email you a one-tap magic link — no passwords to remember.</p>
+
+    <form id="host-login" class="form">
+      <label class="label" for="host-email">Your email</label>
+      <div class="field"><input id="host-email" name="email" type="email" autocomplete="email" placeholder="you@venue.co" required></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:22px;">Email me a magic link</button>
+    </form>
+
+    <p class="microcopy">Only approved hosts can sign in here. Not approved yet? <a class="ulink" href="/request">Apply to host</a>.</p>
+    <div class="spacer"></div>
+    <a class="microcopy center" href="/">← Back to home</a>
+  </section>
+</template>
+
+<!-- 04a · Host dashboard (/dashboard) — mobile -->
+<template id="t-host">
+  <section class="screen screen--scroll">
+    <div class="host__top">
+      <span class="kicker kicker--dusk">Your wall · 14 June</span>
+      <h1 class="display display--med">Maya <em>&amp;</em> Daniel</h1>
+    </div>
+    <div class="host__cover cover__art--01"></div>
+
+    <div class="metrics">
+      <div class="metric"><span class="metric__n">248</span><span class="kicker kicker--mute">Photos</span></div>
+      <div class="metric"><span class="metric__n">63</span><span class="kicker kicker--mute">Guests</span></div>
+      <div class="metric"><span class="metric__n metric__n--dusk">41</span><span class="kicker kicker--mute">Opt-ins</span></div>
+    </div>
+
+    <div class="card card--qr">
+      <div class="qr qr--sm" id="host-qr" aria-hidden="true"></div>
+      <div>
+        <div class="card__t">Share the wall</div>
+        <div class="card__sub">unitywall.com/join/MAYA-DANIEL</div>
+      </div>
+    </div>
+
+    <div class="host__actions">
+      <button class="btn btn--primary">Download all</button>
+      <a class="btn btn--icon" href="/dashboard/card" aria-label="Open shareable card">↗</a>
+    </div>
+
+    <div class="row row--toggle">
+      <div>
+        <div class="row__t">Review before posting</div>
+        <div class="row__sub">New photos wait for your nod</div>
+      </div>
+      <button class="toggle" data-on="true" aria-pressed="true"><span></span></button>
+    </div>
+
+    <div class="card card--layouts">
+      <div class="kicker kicker--mute">Gallery layout</div>
+      <div class="layout-picker">
+        <button class="lp lp--on" data-l="mosaic"><span class="lp__icon lp__icon--mosaic"></span><span>Mosaic</span></button>
+        <button class="lp" data-l="feature"><span class="lp__icon lp__icon--feature"></span><span>Feature</span></button>
+        <button class="lp" data-l="grid"><span class="lp__icon lp__icon--grid"></span><span>Grid</span></button>
+      </div>
+    </div>
+
+    <div class="row row--toggle">
+      <div>
+        <div class="row__t">Upload window</div>
+        <div class="row__sub">Open · closes 2:00 AM</div>
+      </div>
+      <button class="toggle" data-on="true" aria-pressed="true"><span></span></button>
+    </div>
+
+    <a class="row row--toggle" href="/dashboard/slideshow" style="text-decoration:none;cursor:pointer;">
+      <div>
+        <div class="row__t">Projector / live wall</div>
+        <div class="row__sub">Full-bleed slideshow for the room</div>
+      </div>
+      <span class="cta-row__arrow" style="color:var(--dusk);">→</span>
+    </a>
+
+    <div class="info">
+      <div class="info__head"><span class="dot dot--dusk"></span>Photos kept 60 days after the event</div>
+      <div class="info__body">We'll remind you to download at day 50.</div>
+    </div>
+
+    <a class="cta-row" href="/request">
+      <span>Use UnityWall for your own venue</span>
+      <span class="cta-row__arrow">→</span>
+    </a>
+  </section>
+</template>
+
+<!-- 05 · Admin login (/admin with no admin session) -->
+<template id="t-login-admin">
+  <section class="screen screen--pad screen--col">
+    <span class="kicker kicker--dusk">UnityWall · Admin</span>
+    <h1 class="display display--med">Staff sign-in</h1>
+    <p class="lede">Magic-link sign-in with role check. This page is never linked publicly.</p>
+
+    <form id="admin-login" class="form">
+      <label class="label" for="admin-email">Team email</label>
+      <div class="field"><input id="admin-email" name="email" type="email" autocomplete="email" placeholder="you@unitywall.co" required></div>
+      <button type="submit" class="btn btn--primary" style="margin-top:22px;">Email me a link</button>
+    </form>
+
+    <div class="info" style="margin:18px 0 0;">
+      <div class="info__head"><span class="dot dot--dusk"></span>Role gate: <code>is_admin</code> + 2FA recommended</div>
+      <div class="info__body">Server-side role check, never a shared code.</div>
+    </div>
+
+    <div class="spacer"></div>
+    <a class="microcopy center" href="/">← Back to home</a>
+  </section>
+</template>
+
+<!-- 05a · Admin dashboard (/admin) — mobile -->
+<template id="t-admin">
+  <section class="screen screen--scroll">
+    <div class="admin__top">
+      <div>
+        <span class="kicker kicker--dusk">UnityWall · Admin</span>
+        <div class="wall__title">Control room</div>
+      </div>
+      <span class="brandmark brandmark--sm"></span>
+    </div>
+
+    <div class="metrics metrics--admin">
+      <div class="metric"><span class="metric__n">1,284</span><span class="kicker kicker--mute">Emails</span></div>
+      <div class="metric"><span class="metric__n">37</span><span class="kicker kicker--mute">Venues</span></div>
+      <div class="metric"><span class="metric__n metric__n--dusk">9</span><span class="kicker kicker--mute">Pending</span></div>
+      <div class="metric"><span class="metric__n">2.9%</span><span class="kicker kicker--mute">Convert</span></div>
+    </div>
+
+    <div class="section-label">Application queue</div>
+    <div class="appcard">
+      <div class="appcard__t">Copper to Gold</div>
+      <div class="appcard__sub">Elena Cho · Nashville TN · 40–60/yr</div>
+      <div class="chips">
+        <span class="chip">Mosaic</span>
+        <span class="chip">Moderation On</span>
+        <span class="chip">60 days</span>
+      </div>
+      <div class="appcard__actions">
+        <button class="btn btn--primary">Approve</button>
+        <button class="btn btn--secondary">Decline</button>
+      </div>
+    </div>
+
+    <div class="section-label">Collected emails</div>
+    <ul class="leads">
+      <li class="lead"><span class="lead__dot lead__dot--hot"></span><div><div class="lead__t">Elena Cho</div><div class="lead__sub">Venue · 12 Jun</div></div><span class="lead__tag lead__tag--hot">Hot</span></li>
+      <li class="lead"><span class="lead__dot lead__dot--cold"></span><div><div class="lead__t">Priya Anand</div><div class="lead__sub">Guest · 12 photos</div></div><span class="lead__tag">Cold</span></li>
+      <li class="lead"><span class="lead__dot lead__dot--warm"></span><div><div class="lead__t">Marcus Reed</div><div class="lead__sub">Venue · 11 Jun</div></div><span class="lead__tag lead__tag--warm">Warm</span></li>
+      <li class="lead"><span class="lead__dot lead__dot--cold"></span><div><div class="lead__t">Tomás Vega</div><div class="lead__sub">Guest · 8 photos</div></div><span class="lead__tag">Cold</span></li>
+      <li class="lead"><span class="lead__dot lead__dot--hot"></span><div><div class="lead__t">Dana Okoye</div><div class="lead__sub">Venue · 09 Jun</div></div><span class="lead__tag lead__tag--hot">Hot</span></li>
+    </ul>
+  </section>
+</template>
+
+<!-- 05b · Admin dashboard (/admin) — DESKTOP -->
+<template id="t-admin-desktop">
+  <section class="dadmin">
+    <header class="dadmin__top">
+      <div class="dadmin__brand">
+        <span class="brandmark brandmark--md"></span>
+        <div>
+          <span class="kicker kicker--dusk">UnityWall · Admin</span>
+          <h1 class="dadmin__h">Control room</h1>
+        </div>
+      </div>
+      <div class="dadmin__meta">
+        <span class="kicker kicker--mute">Signed in as</span>
+        <span class="dadmin__user" id="dadmin-user">staff@unitywall.co</span>
+        <button class="dadmin__signout" data-action="signout-admin">Sign out</button>
+      </div>
+    </header>
+
+    <div class="dadmin__metrics">
+      <div class="dmetric"><div class="dmetric__n">1,284</div><span class="kicker kicker--mute">Emails collected</span></div>
+      <div class="dmetric"><div class="dmetric__n">37</div><span class="kicker kicker--mute">Venues completed</span></div>
+      <div class="dmetric"><div class="dmetric__n dmetric__n--dusk">9</div><span class="kicker kicker--mute">Pending review</span></div>
+      <div class="dmetric"><div class="dmetric__n">2.9%</div><span class="kicker kicker--mute">Email → venue</span></div>
+    </div>
+
+    <div class="dadmin__split">
+      <section class="dadmin__col">
+        <h3 class="dadmin__sect">Application queue</h3>
+        <div class="dapp">
+          <div class="dapp__head">
+            <div>
+              <div class="dapp__t">Copper to Gold</div>
+              <div class="dapp__sub">Elena Cho · Nashville TN · 40–60 events/yr</div>
+            </div>
+            <div class="dapp__actions">
+              <button class="btn btn--primary btn--inline">Approve</button>
+              <button class="btn btn--secondary btn--inline">Decline</button>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">Layout · Mosaic</span>
+            <span class="chip">Moderation · On</span>
+            <span class="chip">Retention · 60 days</span>
+          </div>
+        </div>
+        <div class="dapp">
+          <div class="dapp__head">
+            <div>
+              <div class="dapp__t">E's Supper Club</div>
+              <div class="dapp__sub">Marcus Reed · Atlanta GA · 20–30 events/yr</div>
+            </div>
+            <div class="dapp__actions">
+              <button class="btn btn--primary btn--inline">Approve</button>
+              <button class="btn btn--secondary btn--inline">Decline</button>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">Layout · Feature</span>
+            <span class="chip">Moderation · Off</span>
+            <span class="chip">Retention · 90 days</span>
+          </div>
+          <div class="dapp__decline">
+            <span class="kicker kicker--mute">Decline reason</span>
+            <div class="field field--inline"><input placeholder="Captured if declined…"></div>
+          </div>
+        </div>
+        <div class="dapp">
+          <div class="dapp__head">
+            <div>
+              <div class="dapp__t">Hotel la Panoramica</div>
+              <div class="dapp__sub">Sofia Bianchi · Florence IT · 70–90 events/yr</div>
+            </div>
+            <div class="dapp__actions">
+              <button class="btn btn--primary btn--inline">Approve</button>
+              <button class="btn btn--secondary btn--inline">Decline</button>
+            </div>
+          </div>
+          <div class="chips">
+            <span class="chip">Layout · Mosaic</span>
+            <span class="chip">Moderation · On</span>
+            <span class="chip">Retention · 60 days</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="dadmin__aside">
+        <h3 class="dadmin__sect">Lead funnel</h3>
+        <div class="funnel">
+          <div class="funnel__row">
+            <div class="funnel__head">
+              <span class="funnel__label"><span class="sw sw--cold"></span>Cold</span>
+              <span class="funnel__n">612</span>
+            </div>
+            <div class="funnel__track"><div class="funnel__bar funnel__bar--cold" style="width:100%"></div></div>
+          </div>
+          <div class="funnel__row">
+            <div class="funnel__head">
+              <span class="funnel__label"><span class="sw sw--warm"></span>Warm</span>
+              <span class="funnel__n">408</span>
+            </div>
+            <div class="funnel__track"><div class="funnel__bar funnel__bar--warm" style="width:67%"></div></div>
+          </div>
+          <div class="funnel__row">
+            <div class="funnel__head">
+              <span class="funnel__label"><span class="sw sw--hot"></span>Hot</span>
+              <span class="funnel__n">264</span>
+            </div>
+            <div class="funnel__track"><div class="funnel__bar funnel__bar--hot" style="width:43%"></div></div>
+          </div>
+          <div class="funnel__total">
+            <span class="kicker kicker--mute">Conversions</span>
+            <span class="funnel__big">37</span>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <h3 class="dadmin__sect dadmin__sect--mt">Collected emails</h3>
+    <div class="dtable">
+      <div class="dtable__head">
+        <span>Lead</span><span>Name</span><span>Email</span><span>Type</span><span>Joined</span><span class="tar">Photos</span>
+      </div>
+      <div class="dtable__row">
+        <span><span class="ltag ltag--hot"><span class="dot"></span>Hot</span></span>
+        <span>Elena Cho</span>
+        <span class="muted">elena@coppertogold.co</span>
+        <span class="dusk-tag">Venue</span>
+        <span class="muted">12 Jun</span>
+        <span class="tar">—</span>
+      </div>
+      <div class="dtable__row">
+        <span><span class="ltag ltag--cold"><span class="dot"></span>Cold</span></span>
+        <span>Priya Anand</span>
+        <span class="muted">priya@email.com</span>
+        <span class="mute-tag">Guest</span>
+        <span class="muted">14 Jun</span>
+        <span class="tar strong">12</span>
+      </div>
+      <div class="dtable__row">
+        <span><span class="ltag ltag--warm"><span class="dot"></span>Warm</span></span>
+        <span>Marcus Reed</span>
+        <span class="muted">marcus@essupper.club</span>
+        <span class="dusk-tag">Venue</span>
+        <span class="muted">11 Jun</span>
+        <span class="tar">—</span>
+      </div>
+      <div class="dtable__row">
+        <span><span class="ltag ltag--cold"><span class="dot"></span>Cold</span></span>
+        <span>Tomás Vega</span>
+        <span class="muted">tomas.v@email.com</span>
+        <span class="mute-tag">Guest</span>
+        <span class="muted">14 Jun</span>
+        <span class="tar strong">8</span>
+      </div>
+      <div class="dtable__row">
+        <span><span class="ltag ltag--hot"><span class="dot"></span>Hot</span></span>
+        <span>Dana Okoye</span>
+        <span class="muted">dana@houseofindia.co</span>
+        <span class="dusk-tag">Venue</span>
+        <span class="muted">09 Jun</span>
+        <span class="tar">—</span>
+      </div>
+      <div class="dtable__row">
+        <span><span class="ltag ltag--warm"><span class="dot"></span>Warm</span></span>
+        <span>Sofia Bianchi</span>
+        <span class="muted">sofia@panoramica.it</span>
+        <span class="dusk-tag">Venue</span>
+        <span class="muted">08 Jun</span>
+        <span class="tar">—</span>
+      </div>
+    </div>
+  </section>
+</template>
+
+<!-- 04b · Host dashboard (/dashboard) — DESKTOP -->
+<template id="t-host-desktop">
+  <section class="dhost">
+    <div class="dhost__main">
+      <span class="kicker kicker--dusk">Your wall · 14 June 2026</span>
+      <h1 class="dhost__h">Maya <em>&amp;</em> Daniel</h1>
+      <p class="dhost__q">A quiet record of the night, kept by everyone who was there.</p>
+
+      <div class="dhost__metrics">
+        <div class="dmetric dmetric--lg"><div class="dmetric__n">248</div><span class="kicker kicker--mute">Photos</span></div>
+        <div class="dmetric dmetric--lg"><div class="dmetric__n">63</div><span class="kicker kicker--mute">Contributors</span></div>
+        <div class="dmetric dmetric--lg"><div class="dmetric__n dmetric__n--dusk">41</div><span class="kicker kicker--mute">Opt-ins</span></div>
+      </div>
+
+      <div class="dhost__latest">
+        <h3 class="dadmin__sect" style="margin:0;">Latest from the wall</h3>
+        <a class="kicker kicker--dusk" href="/join/MAYA-DANIEL/wall">View all →</a>
+      </div>
+      <div class="dhost__strip">
+        <div class="art-01 dhost__photo"></div>
+        <div class="art-02 dhost__photo"></div>
+        <div class="art-03 dhost__photo"></div>
+        <div class="art-05 dhost__photo"></div>
+        <div class="art-06 dhost__photo"></div>
+      </div>
+    </div>
+
+    <aside class="dhost__aside">
+      <div class="dhost__qrcard">
+        <div class="qr qr--lg" id="dhost-qr"></div>
+        <div class="card__t">Share the wall</div>
+        <div class="card__sub">unitywall.com/join/MAYA-DANIEL</div>
+      </div>
+      <button class="btn btn--primary">Download all · 248</button>
+      <a class="btn btn--secondary" href="/dashboard/card">Print table cards</a>
+
+      <div class="row row--toggle" style="margin:0;">
+        <div>
+          <div class="row__t">Moderation</div>
+          <div class="row__sub">Review before posting</div>
+        </div>
+        <button class="toggle" data-on="true" aria-pressed="true"><span></span></button>
+      </div>
+
+      <div class="card card--layouts" style="margin:0;">
+        <div class="kicker kicker--mute">Gallery layout</div>
+        <div class="layout-picker">
+          <button class="lp lp--on" data-l="mosaic"><span class="lp__icon lp__icon--mosaic"></span><span>Mosaic</span></button>
+          <button class="lp" data-l="feature"><span class="lp__icon lp__icon--feature"></span><span>Feature</span></button>
+          <button class="lp" data-l="grid"><span class="lp__icon lp__icon--grid"></span><span>Grid</span></button>
+        </div>
+      </div>
+
+      <div class="row row--toggle" style="margin:0;">
+        <div>
+          <div class="row__t">Upload window</div>
+          <div class="row__sub">Open · closes tonight at 2:00 AM</div>
+        </div>
+        <button class="toggle" data-on="true" aria-pressed="true"><span></span></button>
+      </div>
+
+      <div class="info" style="margin:0;">
+        <div class="info__head"><span class="dot dot--dusk"></span>Photos kept 60 days after the event</div>
+        <div class="info__body">Download to keep them forever — we'll remind you at day 50.</div>
+      </div>
+
+      <a class="cta-row" style="margin:0;" href="/request">
+        <span>Use UnityWall for your own venue</span>
+        <span class="cta-row__arrow">→</span>
+      </a>
+    </aside>
+  </section>
+</template>
+
+<!-- 06 · Slideshow (/dashboard/slideshow) -->
+<template id="t-slideshow">
+  <section class="screen screen--slide">
+    <div class="slide">
+      <div class="slide__art"></div>
+      <div class="slide__vignette"></div>
+      <div class="slide__shade"></div>
+      <div class="slide__brand">
+        <span class="brandmark brandmark--xs"></span>
+        <span>UnityWall</span>
+      </div>
+      <div class="slide__title">
+        <div class="kicker kicker--dusk">14 June 2026</div>
+        <div class="slide__h">Maya <em>&amp;</em> Daniel</div>
+      </div>
+      <div class="slide__caption">The first dance · Priya</div>
+      <div class="slide__toast"><span class="pulse-dot pulse-dot--cream"><span></span></span> New from Anaïs</div>
+      <div class="slide__progress">
+        <span class="progress-bar progress-bar--on"></span>
+        <span class="progress-bar"></span>
+        <span class="progress-bar"></span>
+      </div>
+      <a class="slide__exit" href="/dashboard" aria-label="Exit">×</a>
+    </div>
+  </section>
+</template>
+
+<!-- 07 · Table card (/dashboard/card) -->
+<template id="t-card">
+  <section class="screen screen--center screen--card">
+    <div class="card-print">
+      <span class="kicker kicker--dusk center" style="letter-spacing:.28em;">Add to the wall</span>
+      <h3 class="display display--med center">Maya <em>&amp;</em> Daniel</h3>
+      <p class="quote center">Tonight belongs to us. Help us remember it.</p>
+      <div class="qr qr--lg" id="card-qr" aria-hidden="true"></div>
+      <div class="card-print__url">
+        <div class="kicker">Scan, or visit</div>
+        <div class="card-print__link">unitywall.com/join/MAYA-DANIEL</div>
+      </div>
+      <div class="powered powered--card">
+        <span class="brandmark brandmark--xs"></span>
+        <span>Powered by UnityWall</span>
+      </div>
+    </div>
+    <a class="microcopy" href="/dashboard" style="margin-top:24px;">← Back to dashboard</a>
+  </section>
+</template>
+
+<!-- 99 · Not found -->
+<template id="t-404">
+  <section class="screen screen--center">
+    <div class="brandmark brandmark--md"></div>
+    <span class="kicker kicker--dusk" style="margin-top:20px;">404</span>
+    <h1 class="display display--sm center">This door doesn't open</h1>
+    <p class="lede center">The URL may be old, or the wall may have been closed.</p>
+    <a class="btn btn--primary" href="/" style="margin-top:24px;width:auto;padding:0 22px;">Go home</a>
+  </section>
+</template>
+
+<!-- Reach-out toast -->
+<template id="t-toast">
+  <div class="toast" role="status">
+    <span class="pulse"></span>
+    <span>Sent — we'll reply within the hour.</span>
+  </div>
+</template>
+
+<script src="/app.js" defer></script>
+</body>
+</html>
