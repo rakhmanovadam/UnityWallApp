@@ -12,3 +12,4 @@ _screens/
 .DS_Store
 *.log
 .tmp/
+.vercel
