@@ -7,6 +7,10 @@
 .vercel/
 node_modules/
 _screens/
+.next/
+next-env.d.ts
+*.tsbuildinfo
+pnpm-debug.log*
 
 # Local dev
 .DS_Store
