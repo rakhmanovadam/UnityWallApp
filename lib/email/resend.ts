@@ -112,6 +112,30 @@ Notes: ${opts.notes ?? "—"}
   };
 }
 
+export function hostInviteEmail(opts: {
+  venue: string;
+  magicLink: string;
+}) {
+  return {
+    subject: "You're approved — welcome to UnityWall",
+    text: `Welcome aboard, ${opts.venue}.\n\nYour UnityWall dashboard is ready. Tap the link below to sign in. We never use passwords here — just one-tap magic links.\n\n${opts.magicLink}\n\nIf you need anything, reply to this email.\n\n— UnityWall`,
+    html: `
+<!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
+  <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    <tr><td>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">You're approved</div>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Welcome to UnityWall, ${escape(opts.venue)}</h1>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;">Your dashboard is ready. Tap the button below to sign in. No password — magic link only.</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Open my dashboard</a>
+      </p>
+      <p style="font-size:12px;color:#888;margin:24px 0 0;">Link expires in 1 hour. If you need anything, just reply.</p>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  };
+}
+
 export function applicationAckEmail(opts: { venue: string }) {
   return {
     subject: "We received your UnityWall application",
