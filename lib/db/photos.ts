@@ -127,3 +127,99 @@ export async function signedThumbUrl(path: string, expiresInSeconds = 3600) {
   if (error || !data) throw new Error(`signed_thumb_failed: ${error?.message}`);
   return data.signedUrl;
 }
+
+export type PhotoListItem = {
+  id: string;
+  thumb_url: string;
+  caption: string | null;
+  width: number | null;
+  height: number | null;
+  uploaded_at: string;
+};
+
+export type PhotoListResult = {
+  items: PhotoListItem[];
+  next_cursor: string | null;
+};
+
+// Lists approved photos for a live event, newest first. Uses signed thumb
+// URLs (1h TTL) so the underlying bucket stays private. Cursor is the
+// ISO uploaded_at of the last item in the previous page.
+export async function listApprovedPhotos(opts: {
+  eventId: string;
+  cursor?: string | null;
+  limit?: number;
+}): Promise<PhotoListResult> {
+  const admin = createAdminClient();
+  const limit = Math.min(Math.max(opts.limit ?? 30, 1), 100);
+
+  let query = admin
+    .from("photos")
+    .select("id, caption, width, height, uploaded_at, thumb_path, status")
+    .eq("event_id", opts.eventId)
+    .eq("status", "approved")
+    .order("uploaded_at", { ascending: false })
+    .limit(limit + 1);
+
+  if (opts.cursor) {
+    query = query.lt("uploaded_at", opts.cursor);
+  }
+
+  const { data, error } = await query;
+  if (error || !data) return { items: [], next_cursor: null };
+
+  const rows = data.slice(0, limit);
+  const hasMore = data.length > limit;
+
+  const signed = await Promise.all(
+    rows.map(async (row) => {
+      if (!row.thumb_path) return null;
+      try {
+        const url = await signedThumbUrl(row.thumb_path, 3600);
+        return {
+          id: row.id,
+          thumb_url: url,
+          caption: row.caption,
+          width: row.width,
+          height: row.height,
+          uploaded_at: row.uploaded_at,
+        } satisfies PhotoListItem;
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return {
+    items: signed.filter((x): x is PhotoListItem => x !== null),
+    next_cursor: hasMore ? rows[rows.length - 1].uploaded_at : null,
+  };
+}
+
+export async function getApprovedThumbForPhoto(opts: {
+  photoId: string;
+  eventId: string;
+}): Promise<PhotoListItem | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("photos")
+    .select("id, caption, width, height, uploaded_at, thumb_path, status, event_id")
+    .eq("id", opts.photoId)
+    .maybeSingle();
+  if (error || !data) return null;
+  if (data.event_id !== opts.eventId) return null;
+  if (data.status !== "approved" || !data.thumb_path) return null;
+  try {
+    const url = await signedThumbUrl(data.thumb_path, 3600);
+    return {
+      id: data.id,
+      thumb_url: url,
+      caption: data.caption,
+      width: data.width,
+      height: data.height,
+      uploaded_at: data.uploaded_at,
+    };
+  } catch {
+    return null;
+  }
+}
