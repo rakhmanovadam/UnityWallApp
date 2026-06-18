@@ -4,7 +4,7 @@
 create extension if not exists citext;
 create extension if not exists pgcrypto;
 
--- ---------- helper functions ----------
+-- ---------- helper functions (table-independent) ----------
 
 create or replace function public.is_admin()
 returns boolean
@@ -15,17 +15,6 @@ as $$
     (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
     false
   );
-$$;
-
--- Used in photos RLS to avoid recursive policy lookups on events.
-create or replace function public.event_is_live(eid uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (select 1 from public.events where id = eid and status = 'live');
 $$;
 
 -- ---------- tables ----------
@@ -125,6 +114,20 @@ create table public.audit_log (
   meta jsonb,
   at timestamptz not null default now()
 );
+
+-- ---------- helper functions (table-dependent) ----------
+
+-- Used in photos RLS to avoid recursive policy lookups on events. Defined
+-- after the events table so the SQL body validates on creation.
+create or replace function public.event_is_live(eid uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (select 1 from public.events where id = eid and status = 'live');
+$$;
 
 -- ---------- indexes ----------
 
