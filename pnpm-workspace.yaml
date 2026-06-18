@@ -1,5 +1,13 @@
-allowBuilds:
-  sharp: set this to true or false
+packages:
+  - "."
+
+# pnpm 11 hard-fails install when native build scripts are skipped. We
+# explicitly approve sharp's prebuilt-binary post-install step. The
+# unrs-resolver entry exists because some Next 16 toolchains pull it in.
 onlyBuiltDependencies:
   - sharp
   - unrs-resolver
+  - "@tailwindcss/oxide"
+  - esbuild
+
+dangerouslyAllowAllBuilds: true
