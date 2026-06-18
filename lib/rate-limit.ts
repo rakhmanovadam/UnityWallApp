@@ -2,10 +2,16 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { serverEnv } from "@/lib/env";
 
-type Bucket = "otp" | "leads" | "applications" | "uploads";
+type Bucket =
+  | "otp"
+  | "otp_email"
+  | "leads"
+  | "applications"
+  | "uploads";
 
 const RULES: Record<Bucket, { tokens: number; window: string }> = {
   otp: { tokens: 10, window: "60 s" },
+  otp_email: { tokens: 3, window: "900 s" },
   leads: { tokens: 5, window: "60 s" },
   applications: { tokens: 5, window: "60 s" },
   uploads: { tokens: 60, window: "60 s" },
