@@ -44,6 +44,23 @@ export default async function JoinEventPage({ params }: { params: Params }) {
           <br />
           Help us remember it.
         </p>
+        {event.welcome_message ? (
+          // welcome_message is host-supplied plain text. Render as React
+          // children so newlines are preserved (white-space: pre-wrap on the
+          // element handles it) and no HTML can execute.
+          <p
+            className="welcome"
+            style={{
+              whiteSpace: "pre-wrap",
+              marginTop: 12,
+              color: "var(--dusk, #34455a)",
+              fontStyle: "italic",
+              lineHeight: 1.5,
+            }}
+          >
+            {event.welcome_message}
+          </p>
+        ) : null}
         <div className="spacer" />
         <Link
           href={`/join/${encodeURIComponent(event.code)}/email`}

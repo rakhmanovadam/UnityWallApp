@@ -2,14 +2,22 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminContext } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail, hostInviteEmail } from "@/lib/email/resend";
+import {
+  sendEmail,
+  hostInviteEmail,
+  applicationDeclineEmail,
+} from "@/lib/email/resend";
 import { serverEnv } from "@/lib/env";
 
 export const runtime = "nodejs";
 
 const ParamsSchema = z.object({ id: z.string().uuid() });
+// reason is optional so the admin console can decline without one, but when
+// present it becomes both the persisted rejection_reason and the body the
+// applicant reads in the decline email.
 const Body = z.object({
   action: z.enum(["approve", "decline"]),
+  reason: z.string().max(2000).nullable().optional(),
 });
 
 function codeFromVenue(venue: string) {
@@ -62,10 +70,12 @@ export async function PATCH(
   }
 
   if (parsed.data.action === "decline") {
+    const reason = parsed.data.reason?.trim() || null;
     const { error } = await db
       .from("applications")
       .update({
         status: "declined",
+        rejection_reason: reason,
         reviewed_by: admin.userId,
         reviewed_at: new Date().toISOString(),
       })
@@ -73,14 +83,36 @@ export async function PATCH(
     if (error) {
       return NextResponse.json({ error: "update_failed" }, { status: 500 });
     }
+    // Best-effort applicant notification. Failure here shouldn't block the
+    // decline — the row is already flipped — but we still surface it in the
+    // audit log via a separate action so support has a paper trail if the
+    // applicant claims they never heard back.
+    let emailStatus: "sent" | "failed" | "skipped" = "skipped";
+    try {
+      const tpl = applicationDeclineEmail({
+        venue: app.venue,
+        contact: app.contact,
+        reason,
+      });
+      await sendEmail({
+        to: app.email,
+        subject: tpl.subject,
+        html: tpl.html,
+        text: tpl.text,
+      });
+      emailStatus = "sent";
+    } catch {
+      emailStatus = "failed";
+    }
     await db.from("audit_log").insert({
       actor_id: admin.userId,
       actor_email: admin.email,
       action: "admin.decline_application",
       target_table: "applications",
       target_id: app.id,
+      meta: { reason, email_status: emailStatus },
     });
-    return NextResponse.json({ ok: true, status: "declined" });
+    return NextResponse.json({ ok: true, status: "declined", email: emailStatus });
   }
 
   // approve path: create or fetch the host user, set role=host, generate a

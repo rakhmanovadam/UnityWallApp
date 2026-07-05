@@ -11,10 +11,12 @@ export type EventRow = {
   require_moderation: boolean;
   max_uploads_per_guest: number;
   status: "draft" | "live" | "archived";
+  welcome_message: string | null;
+  cover_image_path: string | null;
 };
 
 const COLS =
-  "id, code, couple_display, couple_html, when_text, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, status";
+  "id, code, couple_display, couple_html, when_text, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, status, welcome_message, cover_image_path";
 
 export function normalizeCode(input: string) {
   return input.trim().toUpperCase().replace(/\s+/g, "-");

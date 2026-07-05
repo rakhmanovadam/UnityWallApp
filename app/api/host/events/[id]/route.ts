@@ -14,6 +14,9 @@ const ParamsSchema = z.object({ id: z.string().uuid() });
 // Hosts can only flip between draft ↔ live themselves; archiving is a
 // destructive admin action gated at the console (events_admin_all policy),
 // so it's not exposed here.
+// welcome_message is capped at 2000 chars: enough for a couple-paragraph
+// message from the couple, small enough not to blow out the guest hero.
+// Passing an empty string clears the field (turns into null server-side).
 const Patch = z.object({
   wall_layout: z.enum(["mosaic", "feature", "grid"]).optional(),
   allow_uploads: z.boolean().optional(),
@@ -21,6 +24,7 @@ const Patch = z.object({
   couple_display: z.string().min(1).max(256).optional(),
   when_text: z.string().min(1).max(256).optional(),
   status: z.enum(["draft", "live"]).optional(),
+  welcome_message: z.string().max(2000).nullable().optional(),
 });
 
 export async function PATCH(
@@ -53,9 +57,15 @@ export async function PATCH(
   }
 
   const admin = createAdminClient();
+  // Empty-string welcome_message normalizes to null so the guest wall's
+  // "if (welcome_message)" render check treats "" and "no message" the same.
+  const update: Record<string, unknown> = { ...parsed.data };
+  if (typeof update.welcome_message === "string" && update.welcome_message.trim() === "") {
+    update.welcome_message = null;
+  }
   const { error } = await admin
     .from("events")
-    .update(parsed.data)
+    .update(update)
     .eq("id", parsedParams.data.id);
   if (error) {
     return NextResponse.json({ error: "update_failed" }, { status: 500 });

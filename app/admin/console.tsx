@@ -38,8 +38,12 @@ export default function AdminConsole({
   const supabase = createClient();
   const [apps, setApps] = useState<Application[]>(initialApps);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // When set, the console renders an inline decline modal for that
+  // application, prompting the reviewer for an optional reason before the
+  // PATCH goes out.
+  const [decliningApp, setDecliningApp] = useState<Application | null>(null);
 
-  async function decide(id: string, action: "approve" | "decline") {
+  async function approve(id: string) {
     setBusyId(id);
     try {
       const res = await fetch(
@@ -47,11 +51,31 @@ export default function AdminConsole({
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action }),
+          body: JSON.stringify({ action: "approve" }),
         },
       );
       if (res.ok) {
         setApps((prev) => prev.filter((a) => a.id !== id));
+      }
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function declineWithReason(id: string, reason: string | null) {
+    setBusyId(id);
+    try {
+      const res = await fetch(
+        `/api/admin/applications/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "decline", reason }),
+        },
+      );
+      if (res.ok) {
+        setApps((prev) => prev.filter((a) => a.id !== id));
+        setDecliningApp(null);
       }
     } finally {
       setBusyId(null);
@@ -128,7 +152,7 @@ export default function AdminConsole({
               <button
                 type="button"
                 className="btn btn--primary"
-                onClick={() => decide(app.id, "approve")}
+                onClick={() => approve(app.id)}
                 disabled={busyId === app.id}
               >
                 {busyId === app.id ? "Approving…" : "Approve"}
@@ -136,7 +160,7 @@ export default function AdminConsole({
               <button
                 type="button"
                 className="btn btn--secondary"
-                onClick={() => decide(app.id, "decline")}
+                onClick={() => setDecliningApp(app)}
                 disabled={busyId === app.id}
               >
                 Decline
@@ -145,6 +169,15 @@ export default function AdminConsole({
           </div>
         ))
       )}
+
+      {decliningApp ? (
+        <DeclineModal
+          app={decliningApp}
+          busy={busyId === decliningApp.id}
+          onCancel={() => setDecliningApp(null)}
+          onConfirm={(reason) => declineWithReason(decliningApp.id, reason)}
+        />
+      ) : null}
 
       <div className="section-label">Recent leads</div>
       <ul className="leads">
@@ -200,5 +233,108 @@ export default function AdminConsole({
         </span>
       </div>
     </section>
+  );
+}
+
+// Small controlled dialog for declining an application. The reason is
+// optional but stored + emailed when supplied — the plan explicitly calls
+// out that "declines capture a reason" so a future review-by-committee can
+// see why an earlier round didn't move forward.
+function DeclineModal({
+  app,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  app: Application;
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: (reason: string | null) => void;
+}) {
+  const [reason, setReason] = useState("");
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="decline-title"
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(20, 20, 30, 0.55)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 16,
+        zIndex: 50,
+      }}
+      onClick={(e) => {
+        // Backdrop click cancels — but only when the click is on the
+        // backdrop itself, not a bubble from the inner panel.
+        if (e.target === e.currentTarget && !busy) onCancel();
+      }}
+    >
+      <div
+        className="card"
+        style={{
+          background: "#fff",
+          borderRadius: 14,
+          padding: 20,
+          maxWidth: 440,
+          width: "100%",
+          boxShadow: "0 20px 40px rgba(20,20,30,0.25)",
+        }}
+      >
+        <div className="kicker kicker--dusk">Decline application</div>
+        <h2 id="decline-title" className="display display--sm" style={{ margin: "8px 0 4px" }}>
+          {app.venue}
+        </h2>
+        <p className="microcopy" style={{ marginBottom: 14 }}>
+          The applicant ({app.contact}, {app.email}) will get an email letting
+          them know. If you leave a note, we include it verbatim.
+        </p>
+        <label className="label" htmlFor="reason-input">
+          Reason <span style={{ color: "#888" }}>(optional)</span>
+        </label>
+        <div className="field">
+          <textarea
+            id="reason-input"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={2000}
+            rows={4}
+            placeholder="e.g. Outside our current service area — happy to reconnect once we expand."
+            disabled={busy}
+            style={{
+              width: "100%",
+              resize: "vertical",
+              fontFamily: "inherit",
+              fontSize: "inherit",
+              padding: "10px 12px",
+              border: 0,
+              background: "transparent",
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <button
+            type="button"
+            className="btn btn--secondary"
+            onClick={() => onConfirm(reason.trim() ? reason : null)}
+            disabled={busy}
+          >
+            {busy ? "Declining…" : "Send decline"}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            onClick={onCancel}
+            disabled={busy}
+          >
+            Back
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

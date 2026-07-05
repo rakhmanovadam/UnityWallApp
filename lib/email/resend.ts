@@ -149,6 +149,39 @@ export function hostInviteEmail(opts: {
   };
 }
 
+export function applicationDeclineEmail(opts: {
+  venue: string;
+  contact: string;
+  reason: string | null;
+}) {
+  const firstName = opts.contact.split(/\s+/)[0] || opts.contact;
+  const reasonBlock = opts.reason
+    ? `<p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;"><strong>A note from the reviewer:</strong><br>${escape(
+        opts.reason,
+      ).replace(/\n/g, "<br>")}</p>`
+    : "";
+  const reasonText = opts.reason
+    ? `\n\nA note from the reviewer:\n${opts.reason}\n`
+    : "";
+  return {
+    subject: "About your UnityWall application",
+    text: `Hi ${firstName},\n\nThanks for taking the time to apply with ${opts.venue}. After a careful look we aren't able to move ${opts.venue} forward as a UnityWall host at this time.${reasonText}\n\nYou're welcome to reapply once anything changes — reply to this email if you'd like to talk it through.\n\n— UnityWall · support@unitywall.co`,
+    html: `
+<!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
+  <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    <tr><td>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">Application update</div>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Thanks for applying, ${escape(firstName)}</h1>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">We aren't able to move <strong>${escape(opts.venue)}</strong> forward as a UnityWall host at this time.</p>
+      ${reasonBlock}
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">You're welcome to reapply once anything changes — hit reply if you'd like to talk it through.</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— UnityWall · support@unitywall.co</p>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  };
+}
+
 export function applicationAckEmail(opts: { venue: string }) {
   return {
     subject: "We received your UnityWall application",

@@ -14,6 +14,7 @@ type Event = {
   wall_layout: string;
   allow_uploads: boolean;
   require_moderation: boolean;
+  welcome_message: string | null;
 };
 
 export default function HostDashboard({
@@ -199,6 +200,7 @@ export default function HostDashboard({
         eventId={event.id}
         coupleDisplay={event.couple_display}
         whenText={event.when_text}
+        welcomeMessage={event.welcome_message}
         onSaved={(patched) => setEvent({ ...event, ...patched })}
       />
 
@@ -310,19 +312,30 @@ function EditableDetails({
   eventId,
   coupleDisplay,
   whenText,
+  welcomeMessage,
   onSaved,
 }: {
   eventId: string;
   coupleDisplay: string;
   whenText: string;
-  onSaved: (patch: { couple_display?: string; when_text?: string }) => void;
+  welcomeMessage: string | null;
+  onSaved: (patch: {
+    couple_display?: string;
+    when_text?: string;
+    welcome_message?: string | null;
+  }) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [couple, setCouple] = useState(coupleDisplay);
   const [when, setWhen] = useState(whenText);
+  const [welcome, setWelcome] = useState(welcomeMessage ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const initial = useRef({ couple: coupleDisplay, when: whenText });
+  const initial = useRef({
+    couple: coupleDisplay,
+    when: whenText,
+    welcome: welcomeMessage ?? "",
+  });
 
   if (!open) {
     return (
@@ -345,16 +358,26 @@ function EditableDetails({
 
   const dirty =
     couple.trim() !== initial.current.couple ||
-    when.trim() !== initial.current.when;
+    when.trim() !== initial.current.when ||
+    welcome.trim() !== initial.current.welcome;
 
   async function save() {
     setError(null);
-    const patch: { couple_display?: string; when_text?: string } = {};
+    const patch: {
+      couple_display?: string;
+      when_text?: string;
+      welcome_message?: string | null;
+    } = {};
     if (couple.trim() && couple.trim() !== initial.current.couple) {
       patch.couple_display = couple.trim();
     }
     if (when.trim() && when.trim() !== initial.current.when) {
       patch.when_text = when.trim();
+    }
+    if (welcome.trim() !== initial.current.welcome) {
+      // Empty string sent to the server signals "clear this" — the PATCH
+      // route normalizes to null so guests stop seeing the previous message.
+      patch.welcome_message = welcome.trim() ? welcome : "";
     }
     if (Object.keys(patch).length === 0) {
       setOpen(false);
@@ -375,8 +398,21 @@ function EditableDetails({
         setSaving(false);
         return;
       }
-      onSaved(patch);
-      initial.current = { couple: couple.trim(), when: when.trim() };
+      onSaved({
+        ...patch,
+        // Local optimistic state uses null for empty so the guest wall's
+        // render-if-truthy pattern stays consistent with what the server
+        // will echo back on the next load.
+        welcome_message:
+          patch.welcome_message === ""
+            ? null
+            : patch.welcome_message ?? undefined,
+      });
+      initial.current = {
+        couple: couple.trim(),
+        when: when.trim(),
+        welcome: welcome.trim(),
+      };
       setOpen(false);
     } catch {
       setError("Network error. Try again.");
@@ -413,6 +449,36 @@ function EditableDetails({
           placeholder="You're invited · 14 June 2026"
         />
       </div>
+      <label
+        className="label"
+        htmlFor="welcome-input"
+        style={{ marginTop: 12 }}
+      >
+        Welcome message <span style={{ color: "#888" }}>(optional)</span>
+      </label>
+      <div className="field">
+        <textarea
+          id="welcome-input"
+          value={welcome}
+          maxLength={2000}
+          rows={4}
+          onChange={(e) => setWelcome(e.target.value)}
+          placeholder="A short note from the couple to their guests."
+          style={{
+            width: "100%",
+            resize: "vertical",
+            fontFamily: "inherit",
+            fontSize: "inherit",
+            padding: "10px 12px",
+            border: 0,
+            background: "transparent",
+          }}
+        />
+      </div>
+      <p className="microcopy" style={{ marginTop: -4 }}>
+        Shown to guests right above the &ldquo;Add your photos&rdquo; button.
+        Leave blank to hide.
+      </p>
       {error ? (
         <p
           className="microcopy"
@@ -437,6 +503,7 @@ function EditableDetails({
           onClick={() => {
             setCouple(initial.current.couple);
             setWhen(initial.current.when);
+            setWelcome(initial.current.welcome);
             setError(null);
             setOpen(false);
           }}

@@ -13,6 +13,7 @@ export type HostContext = {
     wall_layout: string;
     allow_uploads: boolean;
     require_moderation: boolean;
+    welcome_message: string | null;
   }>;
 };
 
@@ -29,7 +30,7 @@ export async function getHostContext(): Promise<HostContext | null> {
   const { data: events } = await admin
     .from("events")
     .select(
-      "id, code, couple_display, when_text, status, wall_layout, allow_uploads, require_moderation",
+      "id, code, couple_display, when_text, status, wall_layout, allow_uploads, require_moderation, welcome_message",
     )
     .eq("host_user_id", auth.user.id)
     .order("created_at", { ascending: false });
