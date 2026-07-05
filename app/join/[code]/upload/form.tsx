@@ -1,15 +1,29 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import imageCompression from "browser-image-compression";
 
+// A single row in the upload UI. Files never leave the tab as bytes — only
+// this metadata is persisted (see sessionStorage handling below), and the
+// File object stays in the in-memory map keyed by item.id.
 type UploadItem = {
   id: string;
   name: string;
   size: number;
-  status: "uploading" | "processing" | "done" | "error";
+  status:
+    | "queued"      // waiting for the sequential worker
+    | "waiting"     // browser is offline; will resume on 'online' event
+    | "compressing" // client-side shrink before signed upload
+    | "uploading"   // PUT to Supabase Storage
+    | "processing"  // finalize route running sharp/HEIC → thumb
+    | "done"
+    | "error";
   progress: number;
   thumbDataUrl?: string;
   error?: string;
+  // When set, finalize crashed but the object is up in storage; a Retry can
+  // skip re-uploading and just re-call /api/uploads/finalize.
+  photoId?: string;
 };
 
 const MAX_BYTES = 25_000_000;
@@ -21,11 +35,25 @@ const ALLOWED = new Set([
   "image/heif",
 ]);
 
+// HEIC / HEIF decoders don't run reliably in browsers — the file gets sent
+// as-is and sharp on the server converts it. Everything else runs through
+// browser-image-compression so venue Wi-Fi carries 1–2 MB per photo instead
+// of 10.
+const HEIC_TYPES = new Set(["image/heic", "image/heif"]);
+
+// Persist a tiny snapshot of the queue so a reload during an event doesn't
+// leave the host wondering whether their photos landed. Bytes aren't
+// persisted (would need IndexedDB + quota handling); on reload the surviving
+// rows appear as "error · reload interrupted" with a re-pick prompt, except
+// for rows that already reached the "processing" phase — those had their
+// object uploaded and can be finalized just by pressing Retry.
+const STORAGE_KEY_PREFIX = "uw_upload_queue:";
+
 function localId() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-function readPreview(file: File): Promise<string | undefined> {
+async function readPreview(file: File): Promise<string | undefined> {
   return new Promise((resolve) => {
     if (!file.type.startsWith("image/")) {
       resolve(undefined);
@@ -40,6 +68,9 @@ function readPreview(file: File): Promise<string | undefined> {
 
 function metaFor(it: UploadItem) {
   const mb = it.size ? (it.size / (1024 * 1024)).toFixed(1) + " MB" : "";
+  if (it.status === "queued") return "queued";
+  if (it.status === "waiting") return "waiting for connection";
+  if (it.status === "compressing") return "compressing…";
   if (it.status === "uploading") {
     return `uploading · ${Math.round(it.progress)}%`;
   }
@@ -51,12 +82,92 @@ function metaFor(it: UploadItem) {
 export default function UploadForm({ code }: { code: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<UploadItem[]>([]);
+  const [online, setOnline] = useState(true);
 
-  const total = items.length;
-  const done = items.filter((i) => i.status === "done").length;
-  const stateLabel =
-    total === 0 ? "Idle" : done === total ? "Done" : "Uploading";
-  const barPct = total ? (done / total) * 100 : 0;
+  // File objects live outside React state — putting them in state would blow
+  // out re-renders and set us up for stale-file bugs on retry. The map is
+  // keyed by item.id so a UI retry click can find the original File.
+  const filesRef = useRef<Map<string, File>>(new Map());
+  // Single sequential worker guard: uploads run one at a time on a phone
+  // uplink, and this flag prevents multiple pickers or retries from starting
+  // parallel workers.
+  const workerBusyRef = useRef(false);
+
+  const storageKey = `${STORAGE_KEY_PREFIX}${code}`;
+
+  // Rehydrate the queue snapshot on first mount. We only surface rows that
+  // were done or had already reached the processing stage — everything else
+  // is a lost cause without the bytes and would just be UX noise.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(storageKey);
+      if (!raw) return;
+      const rows = JSON.parse(raw) as UploadItem[];
+      const surviving = rows
+        .map((r) => {
+          if (r.status === "done") return r;
+          // A row with a photoId is one whose object made it into storage;
+          // Retry will just re-run finalize. Everything else is orphaned by
+          // the reload and gets marked as such.
+          if (r.photoId) {
+            return {
+              ...r,
+              status: "error" as const,
+              error: "resume needed — tap retry",
+              progress: 100,
+            };
+          }
+          return {
+            ...r,
+            status: "error" as const,
+            error: "interrupted — re-pick the file",
+          };
+        })
+        .slice(0, 200); // keep the UI snappy
+      if (surviving.length > 0) setItems(surviving);
+    } catch {
+      // Corrupt cache; forget it silently rather than blocking the page.
+    }
+  }, [storageKey]);
+
+  // Persist on every items change. The debounced-write pattern isn't worth
+  // it here — sessionStorage is fast and events don't rapidly churn during
+  // upload progress (progress lives on the row, but we only write id / name
+  // / status / photoId).
+  useEffect(() => {
+    try {
+      const snapshot = items.map(({ id, name, size, status, photoId }) => ({
+        id,
+        name,
+        size,
+        status,
+        photoId,
+        progress: 0,
+      }));
+      sessionStorage.setItem(storageKey, JSON.stringify(snapshot));
+    } catch {
+      // Storage quota; silently ignore.
+    }
+  }, [items, storageKey]);
+
+  // Track offline/online state so we can pause the worker cleanly. Some
+  // browsers fire 'online' even for cases where fetch still fails, so the
+  // worker treats a real fetch failure as authoritative.
+  useEffect(() => {
+    setOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+    function onOnline() {
+      setOnline(true);
+    }
+    function onOffline() {
+      setOnline(false);
+    }
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
 
   function updateItem(id: string, patch: Partial<UploadItem>) {
     setItems((prev) =>
@@ -64,79 +175,172 @@ export default function UploadForm({ code }: { code: string }) {
     );
   }
 
-  async function uploadOne(item: UploadItem, file: File) {
-    // 1. init: server inserts pending row + signed upload URL
-    let initRes: Response;
+  // Client-side compression. HEIC/HEIF pass through (browsers can't decode
+  // them). Everything else targets ≤ 2 MB, max dimension 2560px, preserving
+  // EXIF orientation (server-side sharp also auto-orients, but this keeps
+  // the client preview correct too).
+  async function maybeCompress(file: File): Promise<File> {
+    if (HEIC_TYPES.has(file.type)) return file;
+    // Small files aren't worth touching — the round-trip cost of decoding +
+    // re-encoding often beats the network savings.
+    if (file.size <= 1_500_000) return file;
     try {
-      initRes = await fetch("/api/uploads/init", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          filename: file.name,
-          content_type: file.type,
-          bytes: file.size,
-        }),
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 2,
+        maxWidthOrHeight: 2560,
+        useWebWorker: true,
+        // Preserve original type when possible — jpeg stays jpeg, png stays
+        // png. The lib produces jpeg fallbacks for exotic formats; that's
+        // fine because our finalize pipeline also accepts jpeg.
+        fileType: file.type,
+      });
+      // Wrap as File to preserve the name (Blob-only outputs break `name`
+      // on the finalize side).
+      return new File([compressed], file.name, {
+        type: compressed.type,
+        lastModified: file.lastModified,
       });
     } catch {
-      updateItem(item.id, { status: "error", error: "network" });
-      return;
+      // Compression failure isn't fatal — upload the original.
+      return file;
+    }
+  }
+
+  const processQueue = useCallback(async () => {
+    if (workerBusyRef.current) return;
+    workerBusyRef.current = true;
+
+    // The worker keeps pulling until nothing is left in a runnable state.
+    // A snapshot per-iteration avoids stale-closure bugs since setItems is
+    // async and we check the latest state each turn.
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      // Find the next item in queued state that also has its File.
+      const next = await new Promise<UploadItem | null>((resolve) => {
+        setItems((prev) => {
+          const runnable = prev.find(
+            (it) => it.status === "queued" && filesRef.current.has(it.id),
+          );
+          resolve(runnable ?? null);
+          return prev;
+        });
+      });
+      if (!next) break;
+
+      // If the browser thinks we're offline, park everything queued until
+      // 'online' fires again. Worker exits so the next pass has a fresh
+      // busy=false.
+      if (!navigator.onLine) {
+        setItems((prev) =>
+          prev.map((it) =>
+            it.status === "queued" ? { ...it, status: "waiting" } : it,
+          ),
+        );
+        break;
+      }
+
+      const file = filesRef.current.get(next.id);
+      if (!file) {
+        updateItem(next.id, {
+          status: "error",
+          error: "file missing — re-pick",
+        });
+        continue;
+      }
+
+      await runOne(next, file);
     }
 
-    if (!initRes.ok) {
-      const data = (await initRes.json().catch(() => ({}))) as {
-        error?: string;
-      };
-      const reason =
-        data.error === "unauthorized"
-          ? "sign in first"
-          : data.error === "file_too_large"
-            ? "max 25 MB"
-            : data.error === "invalid_body"
-              ? "format not supported"
-              : "couldn't start upload";
-      updateItem(item.id, { status: "error", error: reason });
-      return;
-    }
+    workerBusyRef.current = false;
+  }, []);
 
-    const init = (await initRes.json()) as {
-      photo_id: string;
-      upload_url: string;
-    };
+  // A single upload run, callable both from the queue worker and directly
+  // from a retry click. If photoId is already known the init step is
+  // skipped and we jump straight to finalize.
+  async function runOne(item: UploadItem, file: File) {
+    // If a prior run already reached finalize (photoId set, object uploaded)
+    // we only need to poke finalize again.
+    const skipToFinalize = Boolean(item.photoId);
 
-    // 2. PUT the file to Supabase, streaming xhr.upload.onprogress
-    await new Promise<void>((resolve) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", init.upload_url, true);
-      xhr.setRequestHeader("Content-Type", file.type);
-      xhr.upload.onprogress = (e) => {
-        if (e.lengthComputable) {
-          updateItem(item.id, { progress: (e.loaded / e.total) * 100 });
-        }
-      };
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve();
-        } else {
-          updateItem(item.id, { status: "error", error: "upload failed" });
-          resolve();
-        }
-      };
-      xhr.onerror = () => {
-        updateItem(item.id, { status: "error", error: "network" });
-        resolve();
-      };
-      xhr.send(file);
-    });
-
-    if (items.find((i) => i.id === item.id)?.status === "error") return;
-
-    // 3. finalize: server runs sharp, writes thumb, flips status
-    updateItem(item.id, { status: "processing", progress: 100 });
     try {
+      let photoId = item.photoId;
+
+      if (!skipToFinalize) {
+        // Compress before init so the size we quote is the size we send.
+        updateItem(item.id, { status: "compressing", progress: 0 });
+        const prepared = await maybeCompress(file);
+        // Swap the File in the ref so retry gets the compressed version too.
+        filesRef.current.set(item.id, prepared);
+
+        updateItem(item.id, {
+          status: "uploading",
+          progress: 0,
+          size: prepared.size,
+        });
+
+        const initRes = await fetch("/api/uploads/init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: prepared.name,
+            content_type: prepared.type,
+            bytes: prepared.size,
+          }),
+        });
+        if (!initRes.ok) {
+          const data = (await initRes.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          const reason =
+            data.error === "unauthorized"
+              ? "sign in first"
+              : data.error === "file_too_large"
+                ? "max 25 MB"
+                : data.error === "invalid_body"
+                  ? "format not supported"
+                  : data.error === "uploads_closed"
+                    ? "the host closed uploads"
+                    : data.error === "event_not_live"
+                      ? "wall isn't live"
+                      : "couldn't start upload";
+          updateItem(item.id, { status: "error", error: reason });
+          return;
+        }
+
+        const init = (await initRes.json()) as {
+          photo_id: string;
+          upload_url: string;
+        };
+        photoId = init.photo_id;
+        updateItem(item.id, { photoId });
+
+        // PUT the compressed file to Supabase.
+        const putOk = await new Promise<boolean>((resolve) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open("PUT", init.upload_url, true);
+          xhr.setRequestHeader("Content-Type", prepared.type);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              updateItem(item.id, { progress: (e.loaded / e.total) * 100 });
+            }
+          };
+          xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
+          xhr.onerror = () => resolve(false);
+          xhr.ontimeout = () => resolve(false);
+          xhr.send(prepared);
+        });
+        if (!putOk) {
+          updateItem(item.id, { status: "error", error: "upload failed" });
+          return;
+        }
+      }
+
+      updateItem(item.id, { status: "processing", progress: 100 });
+
       const finRes = await fetch("/api/uploads/finalize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ photo_id: init.photo_id }),
+        body: JSON.stringify({ photo_id: photoId }),
       });
       if (!finRes.ok) {
         const data = (await finRes.json().catch(() => ({}))) as {
@@ -157,49 +361,85 @@ export default function UploadForm({ code }: { code: string }) {
     }
   }
 
+  // Kick the worker whenever queued items appear or the network comes back.
+  useEffect(() => {
+    const hasQueued = items.some(
+      (it) => it.status === "queued" || (it.status === "waiting" && online),
+    );
+    if (!hasQueued) return;
+    // Waiting items should flip back to queued when we're online again.
+    if (online) {
+      setItems((prev) =>
+        prev.map((it) =>
+          it.status === "waiting" ? { ...it, status: "queued" } : it,
+        ),
+      );
+    }
+    void processQueue();
+  }, [items, online, processQueue]);
+
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
-    const toQueue: Array<{ item: UploadItem; file: File }> = [];
+    const toEnqueue: UploadItem[] = [];
     for (const file of Array.from(files)) {
       if (!ALLOWED.has(file.type)) continue;
+      const id = localId();
       if (file.size > MAX_BYTES) {
-        const id = localId();
-        toQueue.push({
-          item: {
-            id,
-            name: file.name,
-            size: file.size,
-            status: "error",
-            progress: 0,
-            error: "max 25 MB",
-          },
-          file,
+        toEnqueue.push({
+          id,
+          name: file.name,
+          size: file.size,
+          status: "error",
+          progress: 0,
+          error: "max 25 MB",
         });
         continue;
       }
       const preview = await readPreview(file);
-      const id = localId();
-      toQueue.push({
-        item: {
-          id,
-          name: file.name,
-          size: file.size,
-          status: "uploading",
-          progress: 0,
-          thumbDataUrl: preview,
-        },
-        file,
+      filesRef.current.set(id, file);
+      toEnqueue.push({
+        id,
+        name: file.name,
+        size: file.size,
+        status: navigator.onLine ? "queued" : "waiting",
+        progress: 0,
+        thumbDataUrl: preview,
       });
     }
-    setItems((prev) => [...prev, ...toQueue.map((t) => t.item)]);
-    // Kick off uploads sequentially — Supabase signed upload URLs don't
-    // benefit from parallelism on a phone uplink.
-    for (const { item, file } of toQueue) {
-      if (item.status === "error") continue;
-      await uploadOne(item, file);
-    }
+    setItems((prev) => [...prev, ...toEnqueue]);
     if (inputRef.current) inputRef.current.value = "";
   }
+
+  function retry(id: string) {
+    const item = items.find((it) => it.id === id);
+    if (!item) return;
+    // If bytes are gone (post-reload) and we don't have a photoId, prompt
+    // the user to re-pick — nothing to do here.
+    if (!filesRef.current.has(id) && !item.photoId) {
+      updateItem(id, { error: "re-pick the file, then retry" });
+      return;
+    }
+    updateItem(id, {
+      status: navigator.onLine ? "queued" : "waiting",
+      error: undefined,
+      progress: 0,
+    });
+  }
+
+  const total = items.length;
+  const done = items.filter((i) => i.status === "done").length;
+  const errored = items.filter((i) => i.status === "error").length;
+  const stateLabel =
+    total === 0
+      ? "Idle"
+      : !online
+        ? "Offline"
+        : done + errored === total
+          ? errored > 0
+            ? `${errored} to retry`
+            : "Done"
+          : "Uploading";
+  const barPct = total ? (done / total) * 100 : 0;
 
   return (
     <>
@@ -218,6 +458,17 @@ export default function UploadForm({ code }: { code: string }) {
         </span>
         <span className="dropzone__t">Tap to add photos</span>
       </label>
+
+      {!online ? (
+        <p
+          className="microcopy"
+          style={{ marginTop: 10, color: "#b8443b" }}
+          role="status"
+        >
+          You&apos;re offline. Photos stay queued and upload the moment you
+          reconnect.
+        </p>
+      ) : null}
 
       <div className="upload__status">
         <span id="upload-count">{`${done} of ${total} added to the wall`}</span>
@@ -250,9 +501,26 @@ export default function UploadForm({ code }: { code: string }) {
             </div>
             {it.status === "done" ? (
               <span className="uprow__state uprow__state--done">✓</span>
-            ) : it.status === "uploading" || it.status === "processing" ? (
+            ) : it.status === "error" ? (
+              <button
+                type="button"
+                className="ulink"
+                onClick={() => retry(it.id)}
+                aria-label={`Retry uploading ${it.name}`}
+              >
+                Retry
+              </button>
+            ) : it.status === "waiting" ? (
+              <span
+                className="uprow__state"
+                title="Waiting for connection"
+                aria-label="Waiting for connection"
+              >
+                ⏸
+              </span>
+            ) : (
               <span className="uprow__state uprow__state--spin" />
-            ) : null}
+            )}
           </li>
         ))}
       </ul>
