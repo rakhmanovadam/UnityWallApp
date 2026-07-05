@@ -49,6 +49,9 @@ export async function POST(request: Request) {
     // Mirror into leads so the funnel report can include the applicant.
     // upsertLead treats 'request' at the same rank as 'hot' so it will
     // overwrite an earlier warm scroll but not clobber a live hot record.
+    // person_type: "venue_host" is a permanent upgrade — anyone who fills
+    // out the venue application is committed enough that the admin master
+    // email table should separate them from photo-upload guests.
     try {
       await upsertLead({
         source: "request",
@@ -56,6 +59,7 @@ export async function POST(request: Request) {
         name: parsed.data.contact,
         phone: parsed.data.phone ?? null,
         message: parsed.data.notes ?? null,
+        personType: "venue_host",
       });
     } catch {
       // best-effort

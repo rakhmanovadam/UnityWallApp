@@ -37,6 +37,10 @@ export async function upsertLead(opts: {
   phone?: string | null;
   message?: string | null;
   utm?: Record<string, string> | null;
+  // Callers can promote a lead to venue_host (e.g. when they submit a
+  // venue application). guest → venue_host upgrades are honored; the
+  // reverse never happens.
+  personType?: "guest" | "venue_host";
 }): Promise<UpsertLeadResult> {
   const admin = createAdminClient();
   const email = opts.email?.trim() || null;
@@ -52,6 +56,9 @@ export async function upsertLead(opts: {
         phone: opts.phone ?? null,
         message: opts.message ?? null,
         utm: opts.utm ?? null,
+        // person_type has a DB default of 'guest'; only include when the
+        // caller wants a non-default.
+        ...(opts.personType ? { person_type: opts.personType } : {}),
       })
       .select("id")
       .single();
@@ -61,7 +68,7 @@ export async function upsertLead(opts: {
 
   const { data: existing, error: findErr } = await admin
     .from("leads")
-    .select("id, source, message, event_id, utm")
+    .select("id, source, message, event_id, utm, person_type")
     .eq("email", email)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -79,6 +86,7 @@ export async function upsertLead(opts: {
         phone: opts.phone ?? null,
         message: opts.message ?? null,
         utm: opts.utm ?? null,
+        ...(opts.personType ? { person_type: opts.personType } : {}),
       })
       .select("id")
       .single();
@@ -100,6 +108,14 @@ export async function upsertLead(opts: {
   if (opts.utm && !existing.utm) patch.utm = opts.utm;
   if (opts.name) patch.name = opts.name;
   if (opts.phone) patch.phone = opts.phone;
+  // guest → venue_host upgrades stick; venue_host is never demoted. Match
+  // the never-downgrade principle on `source`.
+  if (
+    opts.personType === "venue_host" &&
+    existing.person_type !== "venue_host"
+  ) {
+    patch.person_type = "venue_host";
+  }
 
   if (Object.keys(patch).length === 0) {
     return { id: existing.id as string, changed: false, source: existingSource };

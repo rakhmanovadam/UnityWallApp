@@ -14,6 +14,9 @@ export type HostContext = {
     allow_uploads: boolean;
     require_moderation: boolean;
     welcome_message: string | null;
+    cover_image_path: string | null;
+    retention_days: number;
+    delete_after: string | null;
   }>;
 };
 
@@ -30,7 +33,7 @@ export async function getHostContext(): Promise<HostContext | null> {
   const { data: events } = await admin
     .from("events")
     .select(
-      "id, code, couple_display, when_text, status, wall_layout, allow_uploads, require_moderation, welcome_message",
+      "id, code, couple_display, when_text, status, wall_layout, allow_uploads, require_moderation, welcome_message, cover_image_path, retention_days, delete_after",
     )
     .eq("host_user_id", auth.user.id)
     .order("created_at", { ascending: false });

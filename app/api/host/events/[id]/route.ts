@@ -17,6 +17,9 @@ const ParamsSchema = z.object({ id: z.string().uuid() });
 // welcome_message is capped at 2000 chars: enough for a couple-paragraph
 // message from the couple, small enough not to blow out the guest hero.
 // Passing an empty string clears the field (turns into null server-side).
+// cover_image_path accepts either the exact "<event_id>/<name>" path that
+// the cover-init route just minted, or null to clear. Anything else is
+// rejected — a host can't attach another event's cover to their own wall.
 const Patch = z.object({
   wall_layout: z.enum(["mosaic", "feature", "grid"]).optional(),
   allow_uploads: z.boolean().optional(),
@@ -25,6 +28,8 @@ const Patch = z.object({
   when_text: z.string().min(1).max(256).optional(),
   status: z.enum(["draft", "live"]).optional(),
   welcome_message: z.string().max(2000).nullable().optional(),
+  cover_image_path: z.string().max(512).nullable().optional(),
+  retention_days: z.number().int().min(1).max(365).optional(),
 });
 
 export async function PATCH(
@@ -62,6 +67,16 @@ export async function PATCH(
   const update: Record<string, unknown> = { ...parsed.data };
   if (typeof update.welcome_message === "string" && update.welcome_message.trim() === "") {
     update.welcome_message = null;
+  }
+  // cover_image_path is a full storage key. Require the event_id/ prefix so
+  // a host can't repoint their cover at another event's file (or a random
+  // path a service-role client wrote). null clears; anything else must
+  // start with the owner's event id.
+  if (typeof update.cover_image_path === "string") {
+    const expectedPrefix = `${parsedParams.data.id}/`;
+    if (!update.cover_image_path.startsWith(expectedPrefix)) {
+      return NextResponse.json({ error: "invalid_cover_path" }, { status: 400 });
+    }
   }
   const { error } = await admin
     .from("events")

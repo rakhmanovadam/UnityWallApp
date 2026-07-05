@@ -13,10 +13,12 @@ export type EventRow = {
   status: "draft" | "live" | "archived";
   welcome_message: string | null;
   cover_image_path: string | null;
+  retention_days: number;
+  delete_after: string | null;
 };
 
 const COLS =
-  "id, code, couple_display, couple_html, when_text, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, status, welcome_message, cover_image_path";
+  "id, code, couple_display, couple_html, when_text, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, status, welcome_message, cover_image_path, retention_days, delete_after";
 
 export function normalizeCode(input: string) {
   return input.trim().toUpperCase().replace(/\s+/g, "-");
