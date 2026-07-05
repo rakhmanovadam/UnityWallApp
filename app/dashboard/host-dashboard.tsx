@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { renderCoupleDisplay } from "@/lib/render";
 
@@ -179,7 +179,7 @@ export default function HostDashboard({
 
       <Link
         className="row row--toggle"
-        href={`/dashboard?moderation=1`}
+        href="/dashboard/moderation"
         style={{ textDecoration: "none" }}
       >
         <div>
@@ -194,6 +194,15 @@ export default function HostDashboard({
           →
         </span>
       </Link>
+
+      <EditableDetails
+        eventId={event.id}
+        coupleDisplay={event.couple_display}
+        whenText={event.when_text}
+        onSaved={(patched) => setEvent({ ...event, ...patched })}
+      />
+
+      <DownloadAll eventId={event.id} eventCode={event.code} />
 
       <div className="row row--toggle">
         <div>
@@ -290,5 +299,193 @@ export default function HostDashboard({
         </span>
       </div>
     </section>
+  );
+}
+
+// Small in-place editor for the two host-supplied strings that drive the guest
+// wall's header. Kept on the same page because the moment a host lands here
+// after approval, "your wall is called <venue>" and "Date to be set" are the
+// two things they want to change first.
+function EditableDetails({
+  eventId,
+  coupleDisplay,
+  whenText,
+  onSaved,
+}: {
+  eventId: string;
+  coupleDisplay: string;
+  whenText: string;
+  onSaved: (patch: { couple_display?: string; when_text?: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [couple, setCouple] = useState(coupleDisplay);
+  const [when, setWhen] = useState(whenText);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const initial = useRef({ couple: coupleDisplay, when: whenText });
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="row row--toggle"
+        style={{ textAlign: "left", background: "transparent", border: 0 }}
+        onClick={() => setOpen(true)}
+      >
+        <div>
+          <div className="row__t">Wall details</div>
+          <div className="row__sub">Rename the wall or set the date</div>
+        </div>
+        <span className="cta-row__arrow" style={{ color: "var(--dusk)" }}>
+          ✎
+        </span>
+      </button>
+    );
+  }
+
+  const dirty =
+    couple.trim() !== initial.current.couple ||
+    when.trim() !== initial.current.when;
+
+  async function save() {
+    setError(null);
+    const patch: { couple_display?: string; when_text?: string } = {};
+    if (couple.trim() && couple.trim() !== initial.current.couple) {
+      patch.couple_display = couple.trim();
+    }
+    if (when.trim() && when.trim() !== initial.current.when) {
+      patch.when_text = when.trim();
+    }
+    if (Object.keys(patch).length === 0) {
+      setOpen(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(
+        `/api/host/events/${encodeURIComponent(eventId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        },
+      );
+      if (!res.ok) {
+        setError("Couldn't save. Try again.");
+        setSaving(false);
+        return;
+      }
+      onSaved(patch);
+      initial.current = { couple: couple.trim(), when: when.trim() };
+      setOpen(false);
+    } catch {
+      setError("Network error. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      <div className="kicker kicker--mute">Wall details</div>
+      <label className="label" htmlFor="couple-input" style={{ marginTop: 12 }}>
+        Couple / venue name
+      </label>
+      <div className="field">
+        <input
+          id="couple-input"
+          type="text"
+          value={couple}
+          maxLength={256}
+          onChange={(e) => setCouple(e.target.value)}
+        />
+      </div>
+      <label className="label" htmlFor="when-input" style={{ marginTop: 12 }}>
+        Date &amp; kicker line
+      </label>
+      <div className="field">
+        <input
+          id="when-input"
+          type="text"
+          value={when}
+          maxLength={256}
+          onChange={(e) => setWhen(e.target.value)}
+          placeholder="You're invited · 14 June 2026"
+        />
+      </div>
+      {error ? (
+        <p
+          className="microcopy"
+          style={{ color: "#b8443b", marginTop: 8 }}
+        >
+          {error}
+        </p>
+      ) : null}
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button
+          type="button"
+          className="btn btn--primary"
+          disabled={saving || !dirty}
+          onClick={save}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        <button
+          type="button"
+          className="btn"
+          disabled={saving}
+          onClick={() => {
+            setCouple(initial.current.couple);
+            setWhen(initial.current.when);
+            setError(null);
+            setOpen(false);
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Streams a ZIP of every approved photo on the event. The button drives a
+// direct navigation (rather than fetch → blob) so the browser handles the
+// download UI and doesn't pin the whole archive in memory for large weddings.
+function DownloadAll({
+  eventId,
+  eventCode,
+}: {
+  eventId: string;
+  eventCode: string;
+}) {
+  const [starting, setStarting] = useState(false);
+
+  return (
+    <div className="row row--toggle">
+      <div>
+        <div className="row__t">Download all photos</div>
+        <div className="row__sub">
+          One ZIP of every approved photo. Safe to run mid-event.
+        </div>
+      </div>
+      <button
+        type="button"
+        className="btn"
+        disabled={starting}
+        onClick={() => {
+          // Trigger a top-level navigation so the browser's own download
+          // manager takes over — no giant Blob held in the tab.
+          setStarting(true);
+          window.location.href = `/api/host/events/${encodeURIComponent(
+            eventId,
+          )}/download`;
+          // Re-enable after a moment; the navigation is already in flight.
+          setTimeout(() => setStarting(false), 4000);
+        }}
+        aria-label={`Download all photos for ${eventCode}`}
+      >
+        {starting ? "Preparing…" : "Download"}
+      </button>
+    </div>
   );
 }

@@ -23,6 +23,9 @@ importers:
       '@upstash/redis':
         specifier: ^1.34.5
         version: 1.38.0
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
       jose:
         specifier: ^5.9.6
         version: 5.10.0
@@ -433,6 +436,9 @@ packages:
 
   fast-deep-equal@2.0.1:
     resolution: {integrity: sha512-bCK/2Z4zLidyB4ReuIsvALH6w31YfAQDmXMqMx6FyfHqvBxtjC0eRumeSu4Bs3XtXwpyIywtSTrVT99BxY1f9w==}
+
+  fflate@0.8.3:
+    resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
 
   find-up@4.1.0:
     resolution: {integrity: sha512-PpOwAdQ/YlXQ2vj8a3h8IipDuYRi3wceVQQGYWxNINccq40Anw7BlsEXCMbt1Zt+OLA6Fq9suIpIWD0OsnISlw==}
@@ -929,6 +935,8 @@ snapshots:
   entities@4.5.0: {}
 
   fast-deep-equal@2.0.1: {}
+
+  fflate@0.8.3: {}
 
   find-up@4.1.0:
     dependencies:
