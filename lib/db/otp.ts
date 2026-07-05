@@ -24,34 +24,76 @@ function unpack(stored: string): { salt: string; hash: string } | null {
   return { salt: stored.slice(0, i), hash: stored.slice(i + 1) };
 }
 
-// Upserts the guest record (one row per event+email) and writes a fresh OTP.
-// Returns the generated plaintext code for the caller to email out.
+// Gets or creates the guest record (one row per event+email) and writes a
+// fresh OTP. Returns the generated plaintext code for the caller to email out.
+//
+// marketing_opt_in is treated as a monotonic flag: once true, never
+// automatically flipped back to false by a repeat OTP request. A resend that
+// passes false (or omits the field) leaves prior consent alone — otherwise
+// asking for a new code would silently erase valid GDPR consent.
 export async function issueOtp(opts: {
   eventId: string;
   email: string;
-  marketingOptIn: boolean;
+  marketingOptIn?: boolean;
   consentTextVersion?: string;
 }) {
   const admin = createAdminClient();
 
-  const { data: guest, error: guestErr } = await admin
-    .from("guests")
-    .upsert(
-      {
-        event_id: opts.eventId,
-        email: opts.email,
-        marketing_opt_in: opts.marketingOptIn,
-        consent_timestamp: opts.marketingOptIn ? new Date().toISOString() : null,
-        consent_text_version: opts.consentTextVersion ?? "v1.0",
-      },
-      { onConflict: "event_id,email" },
-    )
-    .select("id")
-    .single();
+  const now = new Date().toISOString();
+  const optedIn = opts.marketingOptIn === true;
+  const version = opts.consentTextVersion ?? "v1.0";
 
-  if (guestErr || !guest) {
-    throw new Error(`guest_upsert_failed: ${guestErr?.message ?? "unknown"}`);
+  // Race-safe get-or-create: try to insert; on the unique-constraint
+  // collision, look up the existing row. Never uses an upsert for the guest
+  // row, because a plain upsert on conflict would refresh the marketing_opt_in
+  // column and quietly clear prior consent.
+  let guestId: string | null = null;
+  const { data: inserted, error: insertErr } = await admin
+    .from("guests")
+    .insert({
+      event_id: opts.eventId,
+      email: opts.email,
+      marketing_opt_in: optedIn,
+      consent_timestamp: optedIn ? now : null,
+      consent_text_version: version,
+    })
+    .select("id")
+    .maybeSingle();
+
+  if (inserted) {
+    guestId = inserted.id;
+  } else {
+    // Unique-violation (23505) is the expected race path. Fall through to
+    // the lookup; any other error propagates as a real failure.
+    if (insertErr && !String(insertErr.code ?? "").startsWith("23")) {
+      throw new Error(`guest_insert_failed: ${insertErr.message}`);
+    }
+    const { data: existing, error: findErr } = await admin
+      .from("guests")
+      .select("id")
+      .eq("event_id", opts.eventId)
+      .eq("email", opts.email)
+      .maybeSingle();
+    if (findErr || !existing) {
+      throw new Error(`guest_lookup_failed: ${findErr?.message ?? "unknown"}`);
+    }
+    guestId = existing.id;
+
+    // Only stamp consent on affirmative opt-in. A resend passing false leaves
+    // the existing row untouched — no downgrade.
+    if (optedIn) {
+      await admin
+        .from("guests")
+        .update({
+          marketing_opt_in: true,
+          consent_timestamp: now,
+          consent_text_version: version,
+        })
+        .eq("id", guestId);
+    }
   }
+
+  const guest = { id: guestId };
 
   const code = generateCode();
   const salt = randomBytes(8).toString("hex");

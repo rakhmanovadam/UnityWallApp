@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
+import { renderCoupleDisplay } from "@/lib/render";
 
 type Event = {
   id: string;
@@ -83,16 +84,51 @@ export default function HostDashboard({
       <div className="host__top">
         <span className="kicker kicker--dusk">
           Your wall · {event.when_text}
+          {event.status === "draft" ? " · Draft" : null}
+          {event.status === "archived" ? " · Archived" : null}
         </span>
-        <h1
-          className="display display--med"
-          dangerouslySetInnerHTML={{
-            __html: event.couple_display
-              .replace(/&/g, "<em>&amp;</em>")
-              .replace(/\s<em>&amp;<\/em>\s/g, " <em>&amp;</em> "),
-          }}
-        />
+        {/* Render couple_display as React children — not innerHTML — so a
+            compromised host can't XSS themselves or a teammate. */}
+        <h1 className="display display--med">
+          {renderCoupleDisplay(event.couple_display)}
+        </h1>
       </div>
+
+      {event.status === "draft" ? (
+        <div className="card" style={{ padding: 16, marginBottom: 8 }}>
+          <div className="row__t">This wall isn&apos;t live yet</div>
+          <div className="row__sub" style={{ marginBottom: 12 }}>
+            Guests who scan the QR will hit a 404 until you publish. Have a look
+            at the details below first — you can always come back and edit.
+          </div>
+          <button
+            type="button"
+            className="btn btn--primary"
+            onClick={() => patch({ status: "live" })}
+          >
+            Publish wall
+          </button>
+        </div>
+      ) : event.status === "live" ? (
+        <div
+          className="row row--toggle"
+          style={{ borderColor: "var(--dusk)" }}
+        >
+          <div>
+            <div className="row__t">Wall is live</div>
+            <div className="row__sub">
+              QR opens the join page. Unpublish to pause guest access.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="ulink"
+            onClick={() => patch({ status: "draft" })}
+          >
+            Unpublish
+          </button>
+        </div>
+      ) : null}
       <div className="host__cover cover__art--01" />
 
       <div className="metrics">

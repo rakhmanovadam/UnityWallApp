@@ -18,13 +18,26 @@ type SendArgs = {
 
 export async function sendEmail({ to, subject, html, text }: SendArgs) {
   const env = serverEnv();
-  return await client().emails.send({
+  const result = await client().emails.send({
     from: env.RESEND_FROM,
     to,
     subject,
     html,
     text,
   });
+  // Resend returns {data, error} — a silent-failure trap if the caller doesn't
+  // check `error`. Throw here so failed sends surface at the API layer instead
+  // of returning ok:true to guests whose codes never landed.
+  if (result.error) {
+    const msg =
+      typeof result.error === "object" &&
+      result.error !== null &&
+      "message" in result.error
+        ? String((result.error as { message: unknown }).message)
+        : "resend_send_failed";
+    throw new Error(`resend_send_failed: ${msg}`);
+  }
+  return result;
 }
 
 type LeadKind = "warm" | "hot" | "request";

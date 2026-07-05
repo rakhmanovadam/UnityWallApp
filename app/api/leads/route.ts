@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { insertLead } from "@/lib/db/leads";
+import { upsertLead } from "@/lib/db/leads";
 import { sendEmail, leadNotificationEmail } from "@/lib/email/resend";
 import { serverEnv } from "@/lib/env";
 import { getLiveEventByCode } from "@/lib/db/events";
@@ -39,7 +39,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    await insertLead({
+    const result = await upsertLead({
       source: parsed.data.source,
       eventId,
       email: parsed.data.email ?? null,
@@ -49,26 +49,32 @@ export async function POST(request: Request) {
       utm: parsed.data.utm ?? null,
     });
 
-    // Hot leads always notify; warm leads also notify (admin wants visibility
-    // into scroll-through interest). If this gets noisy, gate on `source==="hot"`.
-    try {
-      const env = serverEnv();
-      const tpl = leadNotificationEmail({
-        source: parsed.data.source,
-        email: parsed.data.email ?? null,
-        name: parsed.data.name ?? null,
-        message: parsed.data.message ?? null,
-        eventCode,
-        utm: parsed.data.utm ?? null,
-      });
-      await sendEmail({
-        to: env.ADMIN_NOTIFY_EMAIL,
-        subject: tpl.subject,
-        html: tpl.html,
-        text: tpl.text,
-      });
-    } catch {
-      // Email failure should not break the lead capture flow.
+    // Only fire the sales-team notification when the lead actually just
+    // reached hot for the first time. Warm scrolls fill the inbox with noise
+    // and a hot→hot re-submission from the same email would duplicate a
+    // ticket the team is already working. The plan explicitly reserves the
+    // instant "reply within 1 hour" ping for hot.
+    if (result.changed && result.source === "hot") {
+      try {
+        const env = serverEnv();
+        const tpl = leadNotificationEmail({
+          source: result.source,
+          email: parsed.data.email ?? null,
+          name: parsed.data.name ?? null,
+          message: parsed.data.message ?? null,
+          eventCode,
+          utm: parsed.data.utm ?? null,
+        });
+        await sendEmail({
+          to: env.ADMIN_NOTIFY_EMAIL,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+        });
+      } catch {
+        // Email failure should not break the lead capture flow — the row is
+        // already persisted and will surface in the admin console.
+      }
     }
 
     return NextResponse.json({ ok: true });

@@ -10,6 +10,7 @@ import {
   MAX_BYTES,
   extForContentType,
 } from "@/lib/sharp/process";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,27 @@ export async function POST(request: Request) {
   const parsed = Body.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
+
+  // Enforce the event-level upload gate: the host toggle (allow_uploads)
+  // and the wall's overall state (must be 'live'). Without this check the
+  // "close upload window" button on the dashboard is decorative — guests
+  // could still upload after the host closed the window, and drafts/archived
+  // walls would silently accept photos.
+  const admin = createAdminClient();
+  const { data: ev } = await admin
+    .from("events")
+    .select("status, allow_uploads")
+    .eq("id", guest.event_id)
+    .maybeSingle();
+  if (!ev) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (ev.status !== "live") {
+    return NextResponse.json({ error: "event_not_live" }, { status: 409 });
+  }
+  if (!ev.allow_uploads) {
+    return NextResponse.json({ error: "uploads_closed" }, { status: 409 });
   }
 
   try {

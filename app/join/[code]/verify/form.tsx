@@ -92,10 +92,13 @@ export default function VerifyForm({ code }: { code: string }) {
     if (resendIn > 0) return;
     setError(null);
     try {
+      // Omit marketing_opt_in on resend so the server-side get-or-create
+      // never overwrites a prior affirmative opt-in captured on the email
+      // screen. See lib/db/otp.ts for the monotonic-consent handling.
       const res = await fetch("/api/otp/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, email, marketing_opt_in: false }),
+        body: JSON.stringify({ code, email }),
       });
       if (res.ok) setResendIn(24);
       else setError("Couldn't resend. Try again in a moment.");

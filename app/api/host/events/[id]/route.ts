@@ -7,13 +7,20 @@ export const runtime = "nodejs";
 
 const ParamsSchema = z.object({ id: z.string().uuid() });
 
+// couple_html is intentionally NOT accepted from hosts anymore. The guest wall
+// used to render it via dangerouslySetInnerHTML, which gave any host a stored
+// XSS primitive against their own guests. couple_display is now the only text
+// field and always rendered as React children. See lib/render.tsx.
+// Hosts can only flip between draft ↔ live themselves; archiving is a
+// destructive admin action gated at the console (events_admin_all policy),
+// so it's not exposed here.
 const Patch = z.object({
   wall_layout: z.enum(["mosaic", "feature", "grid"]).optional(),
   allow_uploads: z.boolean().optional(),
   require_moderation: z.boolean().optional(),
   couple_display: z.string().min(1).max(256).optional(),
-  couple_html: z.string().max(2000).optional(),
   when_text: z.string().min(1).max(256).optional(),
+  status: z.enum(["draft", "live"]).optional(),
 });
 
 export async function PATCH(

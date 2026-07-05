@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { z } from "zod";
 import { insertApplication } from "@/lib/db/applications";
-import { insertLead } from "@/lib/db/leads";
+import { upsertLead } from "@/lib/db/leads";
 import {
   sendEmail,
   applicationNotificationEmail,
@@ -46,9 +46,11 @@ export async function POST(request: Request) {
       notes: parsed.data.notes ?? null,
     });
 
-    // Mirror into leads as a hot lead so the funnel report can include it.
+    // Mirror into leads so the funnel report can include the applicant.
+    // upsertLead treats 'request' at the same rank as 'hot' so it will
+    // overwrite an earlier warm scroll but not clobber a live hot record.
     try {
-      await insertLead({
+      await upsertLead({
         source: "request",
         email: parsed.data.email,
         name: parsed.data.contact,
