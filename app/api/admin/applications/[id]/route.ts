@@ -123,11 +123,16 @@ export async function PATCH(
   });
 
   // Draft event scaffolds the wall under the new host id.
+  //
+  // couple_html is a legacy NOT NULL column that used to be rendered via
+  // dangerouslySetInnerHTML on the guest wall (stored XSS). We now render
+  // couple_display as React children, so mirror the raw display string into
+  // couple_html without any interpolation — nothing reads it as HTML anymore.
   const eventCode = codeFromVenue(app.venue);
   await db.from("events").insert({
     code: eventCode,
     couple_display: app.venue,
-    couple_html: app.venue.replace(/&/g, "<em>&amp;</em>"),
+    couple_html: app.venue,
     when_text: "Date to be set",
     host_user_id: hostUserId,
     status: "draft",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLiveEventByCode } from "@/lib/db/events";
+import { renderCoupleDisplay } from "@/lib/render";
 
 type Params = Promise<{ code: string }>;
 
@@ -28,11 +29,15 @@ export default async function JoinEventPage({ params }: { params: Params }) {
         <span className="kicker kicker--dusk" id="join-when">
           {event.when_text}
         </span>
-        <h1
-          className="display"
-          id="join-who"
-          dangerouslySetInnerHTML={{ __html: event.couple_html }}
-        />
+        {/*
+          couple_display is host-supplied. Render as React children (never
+          innerHTML) to neutralize stored XSS. renderCoupleDisplay preserves
+          the italic ampersand visual without ever taking an HTML string.
+          See SECURITY.md for the original vulnerability write-up.
+        */}
+        <h1 className="display" id="join-who">
+          {renderCoupleDisplay(event.couple_display)}
+        </h1>
         <p className="quote">
           Tonight belongs to <span id="join-couple">{event.couple_display}</span>
           .

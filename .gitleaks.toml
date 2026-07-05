@@ -1,0 +1,17 @@
+# gitleaks config for UnityWall.
+# Uses the bundled default ruleset (Supabase keys, JWTs, Resend, Google OAuth,
+# etc. are all covered) and only adds allowlisted paths for dummy values.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Ignore dummy values in template + example files"
+paths = [
+  '''\.env\.example$''',
+  '''README\.md$''',
+  '''SECURITY\.md$''',
+  '''CUTOVER\.md$''',
+  '''\.pre-commit-config\.yaml$''',
+  '''\.gitleaks\.toml$''',
+]

@@ -1,0 +1,10 @@
+# Pre-commit hooks. Install once with `brew install pre-commit gitleaks &&
+# pre-commit install`. Runs on every `git commit`.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      # gitleaks scans the staged diff for API keys, tokens, JWTs, private
+      # keys, etc. Extend `.gitleaks.toml` with project-specific rules or
+      # allowlists (e.g. .env.example dummy values).
+      - id: gitleaks

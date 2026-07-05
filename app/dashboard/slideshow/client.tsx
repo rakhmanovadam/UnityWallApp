@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import type { PhotoListItem } from "@/lib/db/photos";
+import { renderCoupleDisplay } from "@/lib/render";
 
 const ROTATE_MS = 6000;
 
@@ -105,10 +106,9 @@ export default function SlideshowClient({
         </div>
         <div className="slide__title">
           <div className="kicker kicker--dusk">{whenText}</div>
-          <div
-            className="slide__h"
-            dangerouslySetInnerHTML={{ __html: coupleDisplay }}
-          />
+          {/* Render coupleDisplay as React children — not innerHTML — so
+              host-supplied strings can't inject script into the slideshow. */}
+          <div className="slide__h">{renderCoupleDisplay(coupleDisplay)}</div>
         </div>
         <div className="slide__caption">{caption}</div>
         <div className="slide__progress">

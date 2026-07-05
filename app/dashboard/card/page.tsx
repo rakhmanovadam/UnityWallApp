@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getHostContext } from "@/lib/host-session";
 import { qrSvg } from "@/lib/qr";
 import { serverEnv } from "@/lib/env";
+import { renderCoupleDisplay } from "@/lib/render";
 
 export default async function CardPage() {
   const host = await getHostContext();
@@ -25,10 +26,11 @@ export default async function CardPage() {
         >
           Add to the wall
         </span>
-        <h3
-          className="display display--med center"
-          dangerouslySetInnerHTML={{ __html: event.couple_display }}
-        />
+        {/* Render couple_display as React children — not innerHTML — so a
+            host-supplied string can never execute script on the print card. */}
+        <h3 className="display display--med center">
+          {renderCoupleDisplay(event.couple_display)}
+        </h3>
         <p className="quote center">
           Tonight belongs to us. Help us remember it.
         </p>
