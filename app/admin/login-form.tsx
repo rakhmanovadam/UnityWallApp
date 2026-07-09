@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/lib/supabase/browser";
 
 export default function AdminLoginForm() {
   const [email, setEmail] = useState("");
@@ -22,14 +21,12 @@ export default function AdminLoginForm() {
         setSubmitting(true);
         setError(null);
         try {
-          const supabase = createClient();
-          const { error: signInError } = await supabase.auth.signInWithOtp({
-            email: email.trim(),
-            options: {
-              emailRedirectTo: `${window.location.origin}/auth/callback?next=/admin`,
-            },
+          const res = await fetch("/api/auth/login-link", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim(), audience: "admin" }),
           });
-          if (signInError) {
+          if (!res.ok) {
             setError("Couldn't send the link. Try again.");
             setSubmitting(false);
             return;

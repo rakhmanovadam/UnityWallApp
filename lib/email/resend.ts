@@ -149,6 +149,31 @@ export function hostInviteEmail(opts: {
   };
 }
 
+// Sign-in magic link for host/admin login. We generate the link server-side
+// (admin.generateLink) and deliver it ourselves via Resend rather than relying
+// on Supabase's built-in SMTP, which is rate-limited and unreliable.
+export function signInEmail(opts: { magicLink: string; audience: "admin" | "host" }) {
+  const where = opts.audience === "admin" ? "admin console" : "dashboard";
+  return {
+    subject: "Your UnityWall sign-in link",
+    text: `Tap the link below to sign in to your UnityWall ${where}. No password — magic link only. It expires in 1 hour.\n\n${opts.magicLink}\n\nIf you didn't request this, ignore this email.\n\n— UnityWall`,
+    html: `
+<!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
+  <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    <tr><td>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">Sign in</div>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Your UnityWall sign-in link</h1>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;">Tap the button below to sign in to your ${where}. No password — magic link only.</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Sign in to UnityWall</a>
+      </p>
+      <p style="font-size:12px;color:#888;margin:24px 0 0;">Link expires in 1 hour. If you didn't request this, ignore this email.</p>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  };
+}
+
 export function applicationDeclineEmail(opts: {
   venue: string;
   contact: string;
