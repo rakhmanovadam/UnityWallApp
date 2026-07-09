@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
+import MasterEmails, {
+  type MasterRow,
+  type FunnelCounts,
+} from "./master-emails";
 
 type Application = {
   id: string;
@@ -16,24 +20,16 @@ type Application = {
   created_at: string;
 };
 
-type Lead = {
-  id: string;
-  source: "warm" | "hot" | "request";
-  email: string | null;
-  name: string | null;
-  created_at: string;
-};
-
 export default function AdminConsole({
   email,
   metrics,
   applications: initialApps,
-  leads,
+  emails,
 }: {
   email: string;
   metrics: { emails: number; venues: number; pending: number };
   applications: Application[];
-  leads: Lead[];
+  emails: { items: MasterRow[]; total: number; counts: FunnelCounts };
 }) {
   const supabase = createClient();
   const [apps, setApps] = useState<Application[]>(initialApps);
@@ -179,44 +175,8 @@ export default function AdminConsole({
         />
       ) : null}
 
-      <div className="section-label">Recent leads</div>
-      <ul className="leads">
-        {leads.map((lead) => (
-          <li className="lead" key={lead.id}>
-            <span
-              className={`lead__dot lead__dot--${
-                lead.source === "hot"
-                  ? "hot"
-                  : lead.source === "warm"
-                    ? "warm"
-                    : "cold"
-              }`}
-            />
-            <div>
-              <div className="lead__t">{lead.name ?? lead.email ?? "—"}</div>
-              <div className="lead__sub">
-                {lead.source}
-                {" · "}
-                {new Date(lead.created_at).toLocaleDateString()}
-              </div>
-            </div>
-            <span
-              className={`lead__tag${
-                lead.source === "hot"
-                  ? " lead__tag--hot"
-                  : lead.source === "warm"
-                    ? " lead__tag--warm"
-                    : ""
-              }`}
-            >
-              {lead.source[0].toUpperCase() + lead.source.slice(1)}
-            </span>
-          </li>
-        ))}
-        {leads.length === 0 ? (
-          <li className="microcopy">No leads yet.</li>
-        ) : null}
-      </ul>
+      <div className="section-label">Collected emails</div>
+      <MasterEmails initial={emails} />
 
       <div className="powered" style={{ marginTop: 28 }}>
         <span className="brandmark brandmark--xs" />

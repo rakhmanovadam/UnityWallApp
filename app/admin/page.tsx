@@ -46,14 +46,26 @@ export default async function AdminPage() {
     );
   }
 
-  // Authed admin — load initial metrics + pending applications + recent leads.
+  // Authed admin — load initial metrics + pending applications + the first
+  // page of the master collected-emails table (with funnel counts) so the
+  // console renders without a client-side load flash. The table component
+  // re-fetches /api/admin/emails on any filter/paging interaction.
   const db = createAdminClient();
+  const masterHead = () =>
+    db
+      .from("admin_master_emails")
+      .select("email", { count: "exact", head: true });
+
   const [
     { count: emails },
     { count: venues },
     { count: pending },
     { data: applications },
-    { data: leads },
+    { data: masterItems, count: masterTotal },
+    { count: coldCount },
+    { count: warmCount },
+    { count: hotCount },
+    { count: convertedCount },
   ] = await Promise.all([
     db.from("guests").select("*", { count: "exact", head: true }),
     db
@@ -71,10 +83,14 @@ export default async function AdminPage() {
       .order("created_at", { ascending: false })
       .limit(20),
     db
-      .from("leads")
-      .select("id, source, email, name, created_at")
-      .order("created_at", { ascending: false })
-      .limit(20),
+      .from("admin_master_emails")
+      .select("*", { count: "exact" })
+      .order("joined_at", { ascending: false, nullsFirst: false })
+      .range(0, 49),
+    masterHead().eq("lead_temperature", "cold"),
+    masterHead().eq("lead_temperature", "warm"),
+    masterHead().eq("lead_temperature", "hot"),
+    masterHead().eq("converted", true),
   ]);
 
   return (
@@ -86,7 +102,16 @@ export default async function AdminPage() {
         pending: pending ?? 0,
       }}
       applications={applications ?? []}
-      leads={leads ?? []}
+      emails={{
+        items: masterItems ?? [],
+        total: masterTotal ?? 0,
+        counts: {
+          cold: coldCount ?? 0,
+          warm: warmCount ?? 0,
+          hot: hotCount ?? 0,
+          converted: convertedCount ?? 0,
+        },
+      }}
     />
   );
 }
