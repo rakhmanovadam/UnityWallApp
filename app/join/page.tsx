@@ -40,7 +40,7 @@ export default function JoinManualPage() {
             autoCapitalize="characters"
             autoComplete="off"
             inputMode="text"
-            maxLength={14}
+            maxLength={40}
             placeholder="MAYA-DANIEL"
             required
             value={code}
