@@ -28,6 +28,10 @@ export function serverEnv() {
       APP_BASE_URL: z.string().url(),
       UPSTASH_REDIS_REST_URL: z.string().url().optional(),
       UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+      // Shared secret guarding the retention cron endpoint. Vercel Cron sends
+      // it as `Authorization: Bearer <CRON_SECRET>` when set on the project.
+      // Optional so local dev / preview without a cron still boots.
+      CRON_SECRET: z.string().min(16).optional(),
     })
     .parse({
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
@@ -39,5 +43,6 @@ export function serverEnv() {
       APP_BASE_URL: process.env.APP_BASE_URL,
       UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
       UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
+      CRON_SECRET: process.env.CRON_SECRET,
     });
 }

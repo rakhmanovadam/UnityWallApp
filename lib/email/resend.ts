@@ -200,6 +200,37 @@ export function applicationAckEmail(opts: { venue: string }) {
   };
 }
 
+// Sent by the retention cron ahead of a wall's delete_after date so the host
+// downloads their photos before the automatic purge. daysLeft is 14 or 3.
+export function downloadReminderEmail(opts: {
+  venue: string;
+  daysLeft: number;
+  deleteOn: string; // human date, e.g. "August 12, 2026"
+  dashboardUrl: string;
+}) {
+  const urgent = opts.daysLeft <= 3;
+  return {
+    subject: urgent
+      ? `Last chance — your UnityWall photos delete in ${opts.daysLeft} days`
+      : `Your UnityWall photos delete in ${opts.daysLeft} days`,
+    text: `Hi ${opts.venue},\n\nThe photos on your UnityWall come down on ${opts.deleteOn} (${opts.daysLeft} days from now). Download the full-resolution archive from your dashboard before then — once they're purged we can't recover them.\n\n${opts.dashboardUrl}\n\n— UnityWall · support@unitywall.co`,
+    html: `
+<!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
+  <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    <tr><td>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:${urgent ? "#b8443b" : "#7a6f5e"};">${urgent ? "Final reminder" : "Download reminder"}</div>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Your photos delete in ${opts.daysLeft} days</h1>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">The wall for <strong>${escape(opts.venue)}</strong> is scheduled to clear on <strong>${escape(opts.deleteOn)}</strong>. Download the full-resolution archive before then — once purged, the originals can't be recovered.</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="${escape(opts.dashboardUrl)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Download my photos</a>
+      </p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— UnityWall · support@unitywall.co</p>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  };
+}
+
 function escape(s: string) {
   return s
     .replace(/&/g, "&amp;")

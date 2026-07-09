@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -194,9 +195,9 @@ export default function RequestForm() {
         </span>
         <span className="tos__text">
           I agree to the{" "}
-          <a className="ulink" href="#">
+          <Link className="ulink" href="/terms" target="_blank">
             Terms of Service
-          </a>{" "}
+          </Link>{" "}
           and hosting guidelines. <span className="req">Required</span>
         </span>
       </label>

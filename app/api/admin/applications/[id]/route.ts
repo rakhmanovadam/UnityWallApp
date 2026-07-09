@@ -8,6 +8,7 @@ import {
   applicationDeclineEmail,
 } from "@/lib/email/resend";
 import { serverEnv } from "@/lib/env";
+import { markLeadConverted } from "@/lib/db/leads";
 
 export const runtime = "nodejs";
 
@@ -178,6 +179,13 @@ export async function PATCH(
       reviewed_at: new Date().toISOString(),
     })
     .eq("id", app.id);
+
+  // Approving an application is the conversion event: the applicant's lead is
+  // now a customer. Best-effort — a failure here shouldn't fail the approval,
+  // which has already created the host user and event.
+  try {
+    await markLeadConverted(app.email);
+  } catch {}
 
   if (link?.properties?.action_link) {
     try {

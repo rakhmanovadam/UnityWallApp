@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -86,9 +87,9 @@ export default function EmailForm({ code }: { code: string }) {
       </label>
       <p className="microcopy">
         We only ever email about your photos.{" "}
-        <a href="#" className="ulink">
+        <Link href="/privacy" className="ulink" target="_blank">
           Privacy note
-        </a>
+        </Link>
       </p>
       {error ? (
         <p className="microcopy" style={{ color: "#b8443b", marginTop: 10 }}>

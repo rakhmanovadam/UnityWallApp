@@ -133,3 +133,50 @@ export async function upsertLead(opts: {
     source: nextSource,
   };
 }
+
+// Flips a lead to converted when its owner becomes a paying/approved host.
+// Called from the admin approve flow. Idempotent: only unconverted rows for
+// the email are touched, so a re-approval won't move converted_at. Also forces
+// person_type to venue_host. If no lead row exists yet (someone approved before
+// any funnel signal landed), one is inserted so the conversion is still tracked
+// in the admin master-email view.
+export async function markLeadConverted(email: string): Promise<void> {
+  const normalized = email.trim();
+  if (!normalized) return;
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  // email is citext, so equality is case-insensitive.
+  const { data: updated, error } = await admin
+    .from("leads")
+    .update({
+      converted: true,
+      converted_at: now,
+      person_type: "venue_host",
+    })
+    .eq("email", normalized)
+    .eq("converted", false)
+    .select("id");
+  if (error) throw new Error(`lead_convert_failed: ${error.message}`);
+  if (updated && updated.length > 0) return;
+
+  // No row moved — either none existed or all were already converted. Only
+  // insert when truly none exists so we don't create a duplicate for an
+  // already-converted email.
+  const { data: existingRow } = await admin
+    .from("leads")
+    .select("id")
+    .eq("email", normalized)
+    .limit(1)
+    .maybeSingle();
+  if (existingRow) return;
+
+  const { error: insErr } = await admin.from("leads").insert({
+    source: "request",
+    email: normalized,
+    person_type: "venue_host",
+    converted: true,
+    converted_at: now,
+  });
+  if (insErr) throw new Error(`lead_convert_insert_failed: ${insErr.message}`);
+}
