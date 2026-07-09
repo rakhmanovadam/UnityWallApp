@@ -1218,6 +1218,43 @@ a { color: inherit; text-decoration: none; }
   margin-top: 3px;
 }
 
+.card--qr { align-items: flex-start; }
+.share__body { min-width: 0; flex: 1; }
+.share__code {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.share__code-val {
+  font: 600 15px/1 var(--font-mono, ui-monospace, monospace);
+  letter-spacing: .06em;
+  color: var(--ink);
+  background: rgba(26,22,19,.05);
+  border: 1px solid var(--hair);
+  border-radius: var(--r-ctrl);
+  padding: 5px 9px;
+  user-select: all;
+}
+.share__copies {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.btn--ghost {
+  background: #fff;
+  border: 1px solid var(--hair);
+  color: var(--ink);
+}
+.btn--ghost:hover { background: rgba(26,22,19,.04); }
+.btn--sm {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  border-radius: var(--r-ctrl);
+}
+
 .qr {
   flex-shrink: 0;
   padding: 5px;

@@ -209,8 +209,8 @@ function Grid({
               alt={p.caption ?? ""}
               style={{
                 width: "100%",
-                height: 260 + (i % 2 ? 0 : 40),
-                objectFit: "cover",
+                height: "auto",
+                display: "block",
                 borderRadius: 2,
                 border: "1px solid var(--hair-2)",
               }}
@@ -266,7 +266,9 @@ function Grid({
           key={p.id}
           className="wall__tile wall__tile--photo"
           style={{
-            height: 120 + ((i * 37) % 110),
+            aspectRatio:
+              p.width && p.height ? `${p.width} / ${p.height}` : undefined,
+            height: p.width && p.height ? undefined : 120 + ((i * 37) % 110),
             animationDelay: `${i * 50}ms`,
           }}
         >

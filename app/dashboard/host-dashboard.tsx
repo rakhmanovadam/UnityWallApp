@@ -29,6 +29,8 @@ export default function HostDashboard({
   qrSvg: string;
 }) {
   const [event, setEvent] = useState(initialEvent);
+  const [copied, setCopied] = useState<"code" | "link" | null>(null);
+  const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [metrics, setMetrics] = useState<{ photos: number; guests: number; optins: number } | null>(
     null,
   );
@@ -60,6 +62,12 @@ export default function HostDashboard({
     };
   }, [supabase, event.id]);
 
+  useEffect(() => {
+    return () => {
+      if (copyTimer.current) clearTimeout(copyTimer.current);
+    };
+  }, []);
+
   async function patch(patchData: Partial<Event>) {
     const next = { ...event, ...patchData };
     setEvent(next);
@@ -78,6 +86,17 @@ export default function HostDashboard({
   async function signOut() {
     await supabase.auth.signOut();
     window.location.reload();
+  }
+
+  async function copy(kind: "code" | "link", value: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      return;
+    }
+    setCopied(kind);
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(null), 1500);
   }
 
   return (
@@ -156,9 +175,29 @@ export default function HostDashboard({
           aria-hidden="true"
           dangerouslySetInnerHTML={{ __html: qrSvg }}
         />
-        <div>
+        <div className="share__body">
           <div className="card__t">Share the wall</div>
           <div className="card__sub">{joinUrl.replace(/^https?:\/\//, "")}</div>
+          <div className="share__code">
+            <span className="kicker kicker--mute">Join code</span>
+            <code className="share__code-val">{event.code}</code>
+          </div>
+          <div className="share__copies">
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => copy("code", event.code)}
+            >
+              {copied === "code" ? "Copied ✓" : "Copy code"}
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => copy("link", joinUrl)}
+            >
+              {copied === "link" ? "Copied ✓" : "Copy link"}
+            </button>
+          </div>
         </div>
       </div>
 
