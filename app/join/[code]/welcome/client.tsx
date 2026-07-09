@@ -23,7 +23,13 @@ function postLead(body: Record<string, unknown>) {
   }).catch(() => undefined);
 }
 
-export default function WelcomeClient({ code }: { code: string }) {
+export default function WelcomeClient({
+  code,
+  verifiedEmail,
+}: {
+  code: string;
+  verifiedEmail?: string | null;
+}) {
   const aboutRef = useRef<HTMLElement | null>(null);
   const reachRef = useRef<HTMLElement | null>(null);
   const warmFired = useRef(false);
@@ -44,7 +50,11 @@ export default function WelcomeClient({ code }: { code: string }) {
               warmTimer.current = setTimeout(() => {
                 if (warmFired.current) return;
                 warmFired.current = true;
-                void postLead({ source: "warm", code });
+                void postLead({
+                  source: "warm",
+                  code,
+                  email: verifiedEmail ?? null,
+                });
               }, 1500);
             } else if (!entry.isIntersecting && warmTimer.current) {
               clearTimeout(warmTimer.current);
@@ -61,7 +71,7 @@ export default function WelcomeClient({ code }: { code: string }) {
       obs.disconnect();
       if (warmTimer.current) clearTimeout(warmTimer.current);
     };
-  }, [code]);
+  }, [code, verifiedEmail]);
 
   return (
     <section className="screen screen--scroll">
