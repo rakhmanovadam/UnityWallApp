@@ -149,11 +149,22 @@ export async function PATCH(
 
   const env = serverEnv();
   const baseUrl = env.APP_BASE_URL.replace(/\/$/, "");
+  // Generate a magic link but deliver it through our own /auth/callback
+  // (token_hash → verifyOtp), NOT Supabase's action_link. The raw action_link
+  // routes through Supabase's /auth/v1/verify, which on any expiry/pre-consume
+  // bounces to the project's Site URL (misconfigured to localhost) with an
+  // otp_expired error. Our callback verifies the token_hash server-side — same
+  // working flow as /api/auth/login-link.
   const { data: link } = await db.auth.admin.generateLink({
     type: "magiclink",
     email: app.email,
-    options: { redirectTo: `${baseUrl}/auth/callback?next=/dashboard` },
   });
+  const inviteLink = link?.properties?.hashed_token
+    ? `${baseUrl}/auth/callback` +
+      `?token_hash=${encodeURIComponent(link.properties.hashed_token)}` +
+      `&type=${encodeURIComponent(link.properties.verification_type)}` +
+      `&next=${encodeURIComponent("/dashboard")}`
+    : null;
 
   // Draft event scaffolds the wall under the new host id.
   //
@@ -187,11 +198,11 @@ export async function PATCH(
     await markLeadConverted(app.email);
   } catch {}
 
-  if (link?.properties?.action_link) {
+  if (inviteLink) {
     try {
       const tpl = hostInviteEmail({
         venue: app.venue,
-        magicLink: link.properties.action_link,
+        magicLink: inviteLink,
       });
       await sendEmail({
         to: app.email,
