@@ -26,7 +26,7 @@ export default function HostLoginForm() {
           const { error: signInError } = await supabase.auth.signInWithOtp({
             email: email.trim(),
             options: {
-              emailRedirectTo: `${window.location.origin}/dashboard`,
+              emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
             },
           });
           if (signInError) {

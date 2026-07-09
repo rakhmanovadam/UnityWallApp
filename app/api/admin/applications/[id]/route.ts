@@ -152,7 +152,7 @@ export async function PATCH(
   const { data: link } = await db.auth.admin.generateLink({
     type: "magiclink",
     email: app.email,
-    options: { redirectTo: `${baseUrl}/dashboard` },
+    options: { redirectTo: `${baseUrl}/auth/callback?next=/dashboard` },
   });
 
   // Draft event scaffolds the wall under the new host id.
