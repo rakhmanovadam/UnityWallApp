@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getGuestSession } from "@/lib/guest-session";
 import {
+  countGuestPhotos,
   createSignedUploadUrl,
   insertPendingPhoto,
 } from "@/lib/db/photos";
@@ -52,7 +53,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   const { data: ev } = await admin
     .from("events")
-    .select("status, allow_uploads")
+    .select("status, allow_uploads, max_uploads_per_guest")
     .eq("id", guest.event_id)
     .maybeSingle();
   if (!ev) {
@@ -63,6 +64,17 @@ export async function POST(request: Request) {
   }
   if (!ev.allow_uploads) {
     return NextResponse.json({ error: "uploads_closed" }, { status: 409 });
+  }
+
+  // Per-guest upload cap. Soft limit — two concurrent inits could both pass
+  // and overshoot by one — but it stops a single guest flooding the wall or
+  // storage past the host's configured allowance.
+  const existing = await countGuestPhotos(guest.event_id, guest.guest_id);
+  if (existing >= ev.max_uploads_per_guest) {
+    return NextResponse.json(
+      { error: "upload_limit_reached" },
+      { status: 409 },
+    );
   }
 
   try {

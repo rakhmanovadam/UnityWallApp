@@ -5,6 +5,38 @@ export const THUMBS_BUCKET = "wall-thumbs";
 
 export type PhotoStatus = "pending" | "approved" | "rejected";
 
+// Live-status gate for the public read paths. These functions use the
+// service-role client (bypassing RLS), so they must re-assert the same
+// condition the RLS policy `photos_public_select` enforces —
+// `event_is_live(event_id)` — or approved photos of draft/archived walls
+// would stay publicly retrievable by anyone holding the event UUID.
+async function isEventLive(
+  admin: ReturnType<typeof createAdminClient>,
+  eventId: string,
+): Promise<boolean> {
+  const { data } = await admin
+    .from("events")
+    .select("status")
+    .eq("id", eventId)
+    .maybeSingle();
+  return data?.status === "live";
+}
+
+// Count of a guest's existing photos on an event. Used to enforce the
+// per-guest upload cap at init time.
+export async function countGuestPhotos(
+  eventId: string,
+  guestId: string,
+): Promise<number> {
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("photos")
+    .select("id", { count: "exact", head: true })
+    .eq("event_id", eventId)
+    .eq("guest_id", guestId);
+  return count ?? 0;
+}
+
 export async function insertPendingPhoto(opts: {
   id?: string;
   eventId: string;
@@ -151,6 +183,9 @@ export async function listApprovedPhotos(opts: {
   limit?: number;
 }): Promise<PhotoListResult> {
   const admin = createAdminClient();
+  if (!(await isEventLive(admin, opts.eventId))) {
+    return { items: [], next_cursor: null };
+  }
   const limit = Math.min(Math.max(opts.limit ?? 30, 1), 100);
 
   let query = admin
@@ -244,6 +279,7 @@ export async function getApprovedThumbForPhoto(opts: {
   if (error || !data) return null;
   if (data.event_id !== opts.eventId) return null;
   if (data.status !== "approved" || !data.thumb_path) return null;
+  if (!(await isEventLive(admin, data.event_id))) return null;
   try {
     const url = await signedThumbUrl(data.thumb_path, 3600);
     return {
