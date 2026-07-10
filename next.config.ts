@@ -14,34 +14,9 @@ const config: NextConfig = {
     ],
   },
   async headers() {
-    // Content-Security-Policy. Tight allowlist:
-    // - self for app code
-    // - Supabase project for storage + Realtime (wss)
-    // - Google Fonts for the Playfair Display + Hanken Grotesk pair
-    // 'unsafe-inline' on style-src is required by next/script and inline
-    // styles in the legacy markup; revisit when the inline styles are gone.
-    //
-    // In development, React/Turbopack rely on eval() for source maps and
-    // stack reconstruction (Next.js explicitly requires 'unsafe-eval' in dev
-    // — the browser throws otherwise). Production ships without eval, so we
-    // only add it under NODE_ENV === 'development'. This gate is critical:
-    // shipping 'unsafe-eval' to prod would negate the point of this CSP.
-    const isDev = process.env.NODE_ENV !== "production";
-    const scriptSrc = isDev
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : "script-src 'self' 'unsafe-inline'";
-    const csp = [
-      "default-src 'self'",
-      scriptSrc,
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https://*.supabase.co",
-      "font-src 'self' https://fonts.gstatic.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join("; ");
-
+    // Static security headers. The Content-Security-Policy is NOT set here —
+    // it carries a per-request nonce and is emitted from proxy.ts (middleware)
+    // instead, since a nonce can't live in static config.
     return [
       {
         source: "/(.*)",
@@ -57,7 +32,6 @@ const config: NextConfig = {
             key: "Strict-Transport-Security",
             value: "max-age=63072000; includeSubDomains; preload",
           },
-          { key: "Content-Security-Policy", value: csp },
         ],
       },
       {

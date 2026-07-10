@@ -7,7 +7,8 @@ type Bucket =
   | "otp_email"
   | "leads"
   | "applications"
-  | "uploads";
+  | "uploads"
+  | "public_read";
 
 const RULES: Record<Bucket, { tokens: number; window: string }> = {
   otp: { tokens: 10, window: "60 s" },
@@ -15,6 +16,9 @@ const RULES: Record<Bucket, { tokens: number; window: string }> = {
   leads: { tokens: 5, window: "60 s" },
   applications: { tokens: 5, window: "60 s" },
   uploads: { tokens: 60, window: "60 s" },
+  // Unauthenticated photo-list / signed-thumb GETs. Each call hits Storage and
+  // mints a signed URL, so an unbounded caller is an enumeration/DoS amplifier.
+  public_read: { tokens: 120, window: "60 s" },
 };
 
 let redis: Redis | null = null;
