@@ -1070,10 +1070,15 @@ a { color: inherit; text-decoration: none; }
   column-count: 1;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 24px;
   padding: 4px 22px 96px;
 }
-.wall__grid--feature figure { margin: 0; }
+.wall__grid--feature figure {
+  margin: 0;
+  flex: 0 0 auto; /* scroll-container flex children must not squash */
+  width: min(100%, 560px);
+}
 .wall__grid--feature .wall__photo {
   border-radius: var(--r-tile);
   border: 1px solid var(--hair-2);
@@ -1112,6 +1117,9 @@ a { color: inherit; text-decoration: none; }
   flex: 0 0 auto;
   height: 100%;
   animation: none;
+}
+.wall__row--hero {
+  justify-content: center;
 }
 .wall__sentinel {
   height: 1px;

@@ -194,19 +194,21 @@ type JustifiedRow = {
 };
 
 const ROW_GAP = 5;
-const ROW_TARGET = 150;
-const ROW_MAX = 330; // clamp for sparse justified rows and portrait heroes
 const HERO_EVERY = 9;
 
 // Flickr-style justified rows: pack photos left-to-right at natural aspect
 // until the row overflows at the target height, then scale the row so it
 // fills the container exactly. Every HERO_EVERY-th photo gets its own
-// full-width row. Zero cropping except height-clamped heroes.
+// enlarged, centered row sized by height (never stretched to full bleed),
+// so nothing is ever cropped or upscaled past the 480px thumbs.
 function packJustified(
   photos: PhotoListItem[],
   containerWidth: number,
 ): JustifiedRow[] {
   if (containerWidth <= 0) return [];
+  const target = containerWidth >= 900 ? 220 : 150;
+  const rowMax = target * 1.6; // clamp for sparse justified rows
+  const heroHeight = target * 2;
   const rows: JustifiedRow[] = [];
   let buf: PhotoListItem[] = [];
   let sum = 0;
@@ -215,8 +217,8 @@ function packJustified(
     if (buf.length === 0) return;
     const gaps = ROW_GAP * (buf.length - 1);
     const h = justify
-      ? Math.min((containerWidth - gaps) / sum, ROW_MAX)
-      : Math.min(ROW_TARGET, ROW_MAX);
+      ? Math.min((containerWidth - gaps) / sum, rowMax)
+      : target;
     rows.push({
       key: buf[0].id,
       height: Math.round(h),
@@ -231,17 +233,19 @@ function packJustified(
     if (i % HERO_EVERY === 0) {
       flush(true);
       const a = aspectOf(p);
+      // Height-driven: width follows aspect, capped at the container.
+      const h = Math.min(heroHeight, containerWidth / a);
       rows.push({
         key: p.id,
-        height: Math.round(Math.min(containerWidth / a, ROW_MAX)),
+        height: Math.round(h),
         hero: true,
-        items: [{ photo: p, width: containerWidth }],
+        items: [{ photo: p, width: a * h }],
       });
       return;
     }
     buf.push(p);
     sum += aspectOf(p);
-    if (sum * ROW_TARGET + ROW_GAP * (buf.length - 1) >= containerWidth) {
+    if (sum * target + ROW_GAP * (buf.length - 1) >= containerWidth) {
       flush(true);
     }
   });
