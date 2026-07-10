@@ -1,6 +1,13 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import SignOutRow from "./sign-out-row";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <section className="screen screen--scroll">
       <div className="home__top">
@@ -40,6 +47,8 @@ export default function HomePage() {
         </div>
         <span className="home-tile__arrow">→</span>
       </Link>
+
+      {user?.email ? <SignOutRow email={user.email} /> : null}
 
       <div className="home__foot">
         <span className="brandmark brandmark--xs" />
