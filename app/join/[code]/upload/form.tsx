@@ -79,10 +79,31 @@ function metaFor(it: UploadItem) {
   return (mb ? mb + " · " : "") + "on the wall";
 }
 
+// Rough server-side finalize cost per photo (sharp decode + thumb + signed
+// URL round-trips). Folded into the ETA so it doesn't sit at "0s left" while
+// rows say "processing…".
+const FINALIZE_SEC = 2;
+
+function formatEta(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return "";
+  if (seconds < 10) return "a few seconds left";
+  if (seconds < 60) return `about ${Math.ceil(seconds / 5) * 5}s left`;
+  const mins = Math.floor(seconds / 60);
+  const rest = Math.round((seconds % 60) / 15) * 15;
+  return rest > 0
+    ? `about ${mins}m ${rest}s left`
+    : `about ${mins}m left`;
+}
+
 export default function UploadForm({ code }: { code: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<UploadItem[]>([]);
   const [online, setOnline] = useState(true);
+  // Smoothed upload throughput (bytes/sec) measured from XHR progress
+  // events. EMA keeps the ETA from jumping around on bursty venue Wi-Fi.
+  const [speed, setSpeed] = useState(0);
+  const speedSampleRef = useRef<{ t: number; loaded: number } | null>(null);
+  const speedRef = useRef(0);
 
   // File objects live outside React state — putting them in state would blow
   // out re-renders and set us up for stale-file bugs on retry. The map is
@@ -315,6 +336,7 @@ export default function UploadForm({ code }: { code: string }) {
         updateItem(item.id, { photoId });
 
         // PUT the compressed file to Supabase.
+        speedSampleRef.current = null; // fresh XHR — loaded counter restarts
         const putOk = await new Promise<boolean>((resolve) => {
           const xhr = new XMLHttpRequest();
           xhr.open("PUT", init.upload_url, true);
@@ -322,6 +344,21 @@ export default function UploadForm({ code }: { code: string }) {
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
               updateItem(item.id, { progress: (e.loaded / e.total) * 100 });
+              // Sample throughput between progress events; EMA (α=0.3)
+              // smooths spikes. Samples under 250ms apart are noise.
+              const now = performance.now();
+              const prev = speedSampleRef.current;
+              if (prev && now - prev.t >= 250 && e.loaded > prev.loaded) {
+                const inst = ((e.loaded - prev.loaded) / (now - prev.t)) * 1000;
+                const ema = speedRef.current
+                  ? speedRef.current * 0.7 + inst * 0.3
+                  : inst;
+                speedRef.current = ema;
+                setSpeed(ema);
+                speedSampleRef.current = { t: now, loaded: e.loaded };
+              } else if (!prev) {
+                speedSampleRef.current = { t: now, loaded: e.loaded };
+              }
             }
           };
           xhr.onload = () => resolve(xhr.status >= 200 && xhr.status < 300);
@@ -429,17 +466,43 @@ export default function UploadForm({ code }: { code: string }) {
   const total = items.length;
   const done = items.filter((i) => i.status === "done").length;
   const errored = items.filter((i) => i.status === "error").length;
+  const uploading = total > 0 && online && done + errored < total;
   const stateLabel =
     total === 0
       ? "Idle"
       : !online
         ? "Offline"
-        : done + errored === total
+        : !uploading
           ? errored > 0
             ? `${errored} to retry`
             : "Done"
           : "Uploading";
   const barPct = total ? (done / total) * 100 : 0;
+
+  // Time remaining = bytes still to send at the measured throughput, plus a
+  // flat finalize allowance per photo that hasn't landed yet. Hidden until
+  // the first speed sample exists (nothing to estimate from before that).
+  let etaText = "";
+  if (uploading && speed > 0) {
+    let bytesLeft = 0;
+    let pendingCount = 0;
+    for (const it of items) {
+      if (
+        it.status === "queued" ||
+        it.status === "waiting" ||
+        it.status === "compressing"
+      ) {
+        bytesLeft += it.size;
+        pendingCount++;
+      } else if (it.status === "uploading") {
+        bytesLeft += it.size * (1 - it.progress / 100);
+        pendingCount++;
+      } else if (it.status === "processing") {
+        pendingCount++;
+      }
+    }
+    etaText = formatEta(bytesLeft / speed + pendingCount * FINALIZE_SEC);
+  }
 
   return (
     <>
@@ -473,12 +536,18 @@ export default function UploadForm({ code }: { code: string }) {
       <div className="upload__status">
         <span id="upload-count">{`${done} of ${total} added to the wall`}</span>
         <span className="kicker kicker--mute" id="upload-state">
-          {stateLabel}
+          {etaText ? `${stateLabel} · ${etaText}` : stateLabel}
         </span>
       </div>
       <div className="upload__bar" aria-hidden="true">
         <div id="upload-bar-fill" style={{ width: `${barPct}%` }} />
       </div>
+      {uploading ? (
+        <p className="microcopy" role="status" style={{ marginTop: 8 }}>
+          You can lock your phone or hop to another app — just keep this tab
+          open until every photo says &ldquo;on the wall.&rdquo;
+        </p>
+      ) : null}
 
       <ul id="upload-list" className="upload__list" role="list">
         {items.map((it, idx) => (
