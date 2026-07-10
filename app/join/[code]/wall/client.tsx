@@ -198,54 +198,48 @@ const HERO_EVERY = 9;
 
 // Flickr-style justified rows: pack photos left-to-right at natural aspect
 // until the row overflows at the target height, then scale the row so it
-// fills the container exactly. Every HERO_EVERY-th photo gets its own
-// enlarged, centered row sized by height (never stretched to full bleed),
-// so nothing is ever cropped or upscaled past the 480px thumbs.
+// fills the container exactly. Every HERO_EVERY-th photo starts a taller
+// "hero band" (2x target) that packs and justifies like any other row, so
+// the accent never leaves empty space and nothing is cropped.
 function packJustified(
   photos: PhotoListItem[],
   containerWidth: number,
 ): JustifiedRow[] {
   if (containerWidth <= 0) return [];
-  const target = containerWidth >= 900 ? 220 : 150;
-  const rowMax = target * 1.6; // clamp for sparse justified rows
-  const heroHeight = target * 2;
+  const base = containerWidth >= 900 ? 220 : 150;
   const rows: JustifiedRow[] = [];
   let buf: PhotoListItem[] = [];
   let sum = 0;
+  let rowTarget = base;
+  let rowHero = false;
 
   function flush(justify: boolean) {
     if (buf.length === 0) return;
     const gaps = ROW_GAP * (buf.length - 1);
     const h = justify
-      ? Math.min((containerWidth - gaps) / sum, rowMax)
-      : target;
+      ? Math.min((containerWidth - gaps) / sum, rowTarget * 1.6)
+      : rowTarget;
     rows.push({
       key: buf[0].id,
       height: Math.round(h),
-      hero: false,
+      hero: rowHero,
       items: buf.map((p) => ({ photo: p, width: aspectOf(p) * h })),
     });
     buf = [];
     sum = 0;
+    rowTarget = base;
+    rowHero = false;
   }
 
   photos.forEach((p, i) => {
     if (i % HERO_EVERY === 0) {
       flush(true);
-      const a = aspectOf(p);
-      // Height-driven: width follows aspect, capped at the container.
-      const h = Math.min(heroHeight, containerWidth / a);
-      rows.push({
-        key: p.id,
-        height: Math.round(h),
-        hero: true,
-        items: [{ photo: p, width: a * h }],
-      });
-      return;
+      rowTarget = base * 2;
+      rowHero = true;
     }
     buf.push(p);
     sum += aspectOf(p);
-    if (sum * target + ROW_GAP * (buf.length - 1) >= containerWidth) {
+    if (sum * rowTarget + ROW_GAP * (buf.length - 1) >= containerWidth) {
       flush(true);
     }
   });
