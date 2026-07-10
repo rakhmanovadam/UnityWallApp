@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import type { PhotoListItem } from "@/lib/db/photos";
 
@@ -114,8 +114,10 @@ export default function WallClient({
     };
   }, [supabase, eventId]);
 
-  async function loadMore() {
-    if (!cursorRef.current) return;
+  const loadingRef = useRef(false);
+  const loadMore = useCallback(async () => {
+    if (loadingRef.current || !cursorRef.current) return;
+    loadingRef.current = true;
     try {
       const res = await fetch(
         `/api/events/${encodeURIComponent(eventId)}/photos?cursor=${encodeURIComponent(cursorRef.current)}`,
@@ -128,9 +130,11 @@ export default function WallClient({
       cursorRef.current = data.next_cursor;
       setPhotos((prev) => dedupe([...prev, ...data.items]));
     } catch {
-      // ignore
+      // ignore — sentinel will retrigger on the next scroll
+    } finally {
+      loadingRef.current = false;
     }
-  }
+  }, [eventId]);
 
   return (
     <section className="screen screen--wall">
@@ -178,6 +182,131 @@ export default function WallClient({
   );
 }
 
+function aspectOf(p: PhotoListItem) {
+  return p.width && p.height ? p.width / p.height : 1;
+}
+
+type JustifiedRow = {
+  key: string;
+  height: number;
+  hero: boolean;
+  items: Array<{ photo: PhotoListItem; width: number }>;
+};
+
+const ROW_GAP = 5;
+const ROW_TARGET = 150;
+const ROW_MAX = 330; // clamp for sparse justified rows and portrait heroes
+const HERO_EVERY = 9;
+
+// Flickr-style justified rows: pack photos left-to-right at natural aspect
+// until the row overflows at the target height, then scale the row so it
+// fills the container exactly. Every HERO_EVERY-th photo gets its own
+// full-width row. Zero cropping except height-clamped heroes.
+function packJustified(
+  photos: PhotoListItem[],
+  containerWidth: number,
+): JustifiedRow[] {
+  if (containerWidth <= 0) return [];
+  const rows: JustifiedRow[] = [];
+  let buf: PhotoListItem[] = [];
+  let sum = 0;
+
+  function flush(justify: boolean) {
+    if (buf.length === 0) return;
+    const gaps = ROW_GAP * (buf.length - 1);
+    const h = justify
+      ? Math.min((containerWidth - gaps) / sum, ROW_MAX)
+      : Math.min(ROW_TARGET, ROW_MAX);
+    rows.push({
+      key: buf[0].id,
+      height: Math.round(h),
+      hero: false,
+      items: buf.map((p) => ({ photo: p, width: aspectOf(p) * h })),
+    });
+    buf = [];
+    sum = 0;
+  }
+
+  photos.forEach((p, i) => {
+    if (i % HERO_EVERY === 0) {
+      flush(true);
+      const a = aspectOf(p);
+      rows.push({
+        key: p.id,
+        height: Math.round(Math.min(containerWidth / a, ROW_MAX)),
+        hero: true,
+        items: [{ photo: p, width: containerWidth }],
+      });
+      return;
+    }
+    buf.push(p);
+    sum += aspectOf(p);
+    if (sum * ROW_TARGET + ROW_GAP * (buf.length - 1) >= containerWidth) {
+      flush(true);
+    }
+  });
+  flush(false); // last row keeps target height, left-aligned
+  return rows;
+}
+
+function JustifiedGrid({
+  photos,
+  sentinel,
+}: {
+  photos: PhotoListItem[];
+  sentinel: React.ReactNode;
+}) {
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const [width, setWidth] = useState(0);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const w = entries[0]?.contentRect.width ?? 0;
+      setWidth(Math.round(w));
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const rows = useMemo(() => packJustified(photos, width), [photos, width]);
+
+  return (
+    <div
+      id="wall-grid"
+      ref={wrapRef}
+      className="wall__grid wall__grid--justified"
+      data-layout="grid"
+    >
+      {rows.map((row, ri) => (
+        <div
+          key={row.key}
+          className={"wall__row" + (row.hero ? " wall__row--hero" : "")}
+          style={{ height: row.height, animationDelay: `${(ri % 12) * 40}ms` }}
+        >
+          {row.items.map(({ photo, width: w }) => (
+            <div
+              key={photo.id}
+              className="wall__tile wall__tile--photo"
+              style={{ width: w }}
+            >
+              <img
+                src={photo.thumb_url}
+                alt={photo.caption ?? ""}
+                loading="lazy"
+                decoding="async"
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            </div>
+          ))}
+        </div>
+      ))}
+      {sentinel}
+    </div>
+  );
+}
+
 function Grid({
   layout,
   photos,
@@ -187,9 +316,25 @@ function Grid({
   photos: PhotoListItem[];
   onLoadMore: () => void;
 }) {
-  // Reserve scroll-triggered loadMore for a future pass; keep the bottom
-  // anchor link for now so layouts render cleanly with what we have.
-  void onLoadMore;
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) onLoadMore();
+      },
+      { rootMargin: "600px" },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [onLoadMore, layout]);
+
+  const sentinel = (
+    <div ref={sentinelRef} className="wall__sentinel" aria-hidden="true" />
+  );
+
   if (layout === "feature") {
     return (
       <div
@@ -197,16 +342,18 @@ function Grid({
         className="wall__grid wall__grid--feature"
         data-layout="feature"
       >
-        {photos.slice(0, 8).map((p, i) => (
+        {photos.map((p, i) => (
           <figure
             key={p.id}
             className="wall__tile wall__tile--feature"
-            style={{ animationDelay: `${i * 60}ms` }}
+            style={{ animationDelay: `${(i % 8) * 60}ms` }}
           >
             <img
               className="wall__photo"
               src={p.thumb_url}
               alt={p.caption ?? ""}
+              loading="lazy"
+              decoding="async"
               style={{
                 width: "100%",
                 height: "auto",
@@ -226,34 +373,12 @@ function Grid({
             </figcaption>
           </figure>
         ))}
+        {sentinel}
       </div>
     );
   }
   if (layout === "grid") {
-    return (
-      <div
-        id="wall-grid"
-        className="wall__grid wall__grid--grid"
-        data-layout="grid"
-      >
-        {photos.slice(0, 14).map((p, i) => (
-          <div
-            key={p.id}
-            className={
-              "wall__tile wall__tile--photo" +
-              (i === 0 || i === 6 ? " wall__tile--big" : "")
-            }
-            style={{ animationDelay: `${i * 50}ms` }}
-          >
-            <img
-              src={p.thumb_url}
-              alt={p.caption ?? ""}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-            />
-          </div>
-        ))}
-      </div>
-    );
+    return <JustifiedGrid photos={photos} sentinel={sentinel} />;
   }
   return (
     <div
@@ -261,24 +386,34 @@ function Grid({
       className="wall__grid wall__grid--mosaic"
       data-layout="mosaic"
     >
-      {photos.map((p, i) => (
-        <div
-          key={p.id}
-          className="wall__tile wall__tile--photo"
-          style={{
-            aspectRatio:
-              p.width && p.height ? `${p.width} / ${p.height}` : undefined,
-            height: p.width && p.height ? undefined : 120 + ((i * 37) % 110),
-            animationDelay: `${i * 50}ms`,
-          }}
-        >
-          <img
-            src={p.thumb_url}
-            alt={p.caption ?? ""}
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </div>
-      ))}
+      <div className="wall__masonry">
+        {photos.map((p, i) => {
+          const hasDims = Boolean(p.width && p.height);
+          return (
+            <div
+              key={p.id}
+              className="wall__tile wall__tile--photo"
+              style={{
+                aspectRatio: hasDims ? `${p.width} / ${p.height}` : undefined,
+                animationDelay: `${(i % 20) * 50}ms`,
+              }}
+            >
+              <img
+                src={p.thumb_url}
+                alt={p.caption ?? ""}
+                loading="lazy"
+                decoding="async"
+                style={
+                  hasDims
+                    ? { width: "100%", height: "100%", objectFit: "cover" }
+                    : { width: "100%", height: "auto", display: "block" }
+                }
+              />
+            </div>
+          );
+        })}
+      </div>
+      {sentinel}
     </div>
   );
 }
