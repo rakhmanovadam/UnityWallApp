@@ -12,14 +12,11 @@ export default function SignOutRow({ email }: { email: string }) {
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "flex-end",
+        justifyContent: "flex-start",
         gap: 10,
         padding: "14px 20px 0",
       }}
     >
-      <span className="microcopy" style={{ margin: 0 }}>
-        Signed in as <strong>{email}</strong>
-      </span>
       <button
         type="button"
         className="btn btn--ghost btn--sm"
@@ -32,6 +29,9 @@ export default function SignOutRow({ email }: { email: string }) {
       >
         {busy ? "Signing out…" : "Sign out"}
       </button>
+      <span className="microcopy" style={{ margin: 0 }}>
+        Signed in as <strong>{email}</strong>
+      </span>
     </div>
   );
 }
