@@ -12,6 +12,7 @@ export type MasterRow = {
   person_type: "guest" | "venue_host";
   converted: boolean;
   converted_at: string | null;
+  marketing_opt_in: boolean;
   joined_at: string | null;
   photos_uploaded: number;
   verified_events: number;
@@ -62,6 +63,8 @@ export default function MasterEmails({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  // Emails whose converted PATCH is in flight — disables just that checkbox.
+  const [savingEmails, setSavingEmails] = useState<Set<string>>(new Set());
 
   // Skip the first client fetch when the server already gave us page 1 with
   // default filters — otherwise fetch immediately on mount.
@@ -125,6 +128,46 @@ export default function MasterEmails({
   const setTemp = resetPageAnd(setTemperature);
   const setType = resetPageAnd(setPersonType);
   const setConv = resetPageAnd(setConverted);
+
+  // Manual "actually bought from UnityWall" toggle. Optimistic: the checkbox
+  // and the Converted counter flip immediately and revert if the PATCH fails.
+  async function toggleConverted(row: MasterRow) {
+    const next = !row.converted;
+    setSavingEmails((prev) => new Set(prev).add(row.email));
+    setItems((prev) =>
+      prev.map((r) =>
+        r.email === row.email ? { ...r, converted: next } : r,
+      ),
+    );
+    setCounts((prev) => ({
+      ...prev,
+      converted: Math.max(0, prev.converted + (next ? 1 : -1)),
+    }));
+    try {
+      const res = await fetch("/api/admin/emails", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: row.email, converted: next }),
+      });
+      if (!res.ok) throw new Error("patch_failed");
+    } catch {
+      setItems((prev) =>
+        prev.map((r) =>
+          r.email === row.email ? { ...r, converted: row.converted } : r,
+        ),
+      );
+      setCounts((prev) => ({
+        ...prev,
+        converted: Math.max(0, prev.converted + (next ? -1 : 1)),
+      }));
+    } finally {
+      setSavingEmails((prev) => {
+        const copy = new Set(prev);
+        copy.delete(row.email);
+        return copy;
+      });
+    }
+  }
 
   function clearFilters() {
     setQ("");
@@ -273,6 +316,7 @@ export default function MasterEmails({
                 <th style={thStyle}>Temp</th>
                 <th style={thStyle}>Type</th>
                 <th style={thStyle}>Converted</th>
+                <th style={thStyle}>Opt-in</th>
                 <th style={thStyle}>Joined</th>
                 <th style={{ ...thStyle, textAlign: "right" }}>Photos</th>
               </tr>
@@ -300,8 +344,23 @@ export default function MasterEmails({
                     {row.person_type === "venue_host" ? "Venue host" : "Guest"}
                   </td>
                   <td style={tdStyle}>
-                    {row.converted ? (
-                      <span title={fmtDate(row.converted_at)}>✓</span>
+                    <input
+                      type="checkbox"
+                      checked={row.converted}
+                      disabled={savingEmails.has(row.email)}
+                      onChange={() => void toggleConverted(row)}
+                      title={
+                        row.converted
+                          ? `Bought from UnityWall${row.converted_at ? ` · ${fmtDate(row.converted_at)}` : ""}`
+                          : "Mark as bought from UnityWall"
+                      }
+                      aria-label={`Mark ${row.email} as converted`}
+                      style={{ width: 16, height: 16, cursor: "pointer" }}
+                    />
+                  </td>
+                  <td style={tdStyle}>
+                    {row.marketing_opt_in ? (
+                      <span title="Opted in to marketing emails">✓</span>
                     ) : (
                       "—"
                     )}

@@ -8,7 +8,7 @@ import {
   applicationDeclineEmail,
 } from "@/lib/email/resend";
 import { serverEnv } from "@/lib/env";
-import { markLeadConverted } from "@/lib/db/leads";
+import { markLeadVenueHost } from "@/lib/db/leads";
 
 export const runtime = "nodejs";
 
@@ -191,11 +191,12 @@ export async function PATCH(
     })
     .eq("id", app.id);
 
-  // Approving an application is the conversion event: the applicant's lead is
-  // now a customer. Best-effort — a failure here shouldn't fail the approval,
-  // which has already created the host user and event.
+  // Approval tags the lead as a venue host but does NOT mark it converted —
+  // conversion means "actually bought" and is checked by hand in the console.
+  // Best-effort: a failure here shouldn't fail the approval, which has
+  // already created the host user and event.
   try {
-    await markLeadConverted(app.email);
+    await markLeadVenueHost(app.email);
   } catch {}
 
   if (inviteLink) {

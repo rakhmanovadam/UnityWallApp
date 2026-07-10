@@ -134,47 +134,62 @@ export async function upsertLead(opts: {
   };
 }
 
-// Flips a lead to converted when its owner becomes a paying/approved host.
-// Called from the admin approve flow. Idempotent: only unconverted rows for
-// the email are touched, so a re-approval won't move converted_at. Also forces
-// person_type to venue_host. If no lead row exists yet (someone approved before
-// any funnel signal landed), one is inserted so the conversion is still tracked
-// in the admin master-email view.
-export async function markLeadConverted(email: string): Promise<void> {
+// Tags a lead as a venue host when their application is approved. Deliberately
+// does NOT touch converted — "converted" means "actually bought from
+// UnityWall" and is flipped by hand in the admin console (setLeadConverted).
+// If no lead row exists yet, one is inserted so the master-email view still
+// carries the venue_host type.
+export async function markLeadVenueHost(email: string): Promise<void> {
   const normalized = email.trim();
   if (!normalized) return;
   const admin = createAdminClient();
-  const now = new Date().toISOString();
 
   // email is citext, so equality is case-insensitive.
   const { data: updated, error } = await admin
     .from("leads")
-    .update({
-      converted: true,
-      converted_at: now,
-      person_type: "venue_host",
-    })
+    .update({ person_type: "venue_host" })
     .eq("email", normalized)
-    .eq("converted", false)
     .select("id");
-  if (error) throw new Error(`lead_convert_failed: ${error.message}`);
+  if (error) throw new Error(`lead_tag_failed: ${error.message}`);
   if (updated && updated.length > 0) return;
-
-  // No row moved — either none existed or all were already converted. Only
-  // insert when truly none exists so we don't create a duplicate for an
-  // already-converted email.
-  const { data: existingRow } = await admin
-    .from("leads")
-    .select("id")
-    .eq("email", normalized)
-    .limit(1)
-    .maybeSingle();
-  if (existingRow) return;
 
   const { error: insErr } = await admin.from("leads").insert({
     source: "request",
     email: normalized,
     person_type: "venue_host",
+  });
+  if (insErr) throw new Error(`lead_tag_insert_failed: ${insErr.message}`);
+}
+
+// Manual conversion toggle for the admin master-email table. Setting true
+// stamps converted_at once (idempotent re-checks won't move it); setting
+// false clears both. Inserts a lead row when the email only exists on the
+// guests side so the checkbox works for any collected email.
+export async function setLeadConverted(
+  email: string,
+  converted: boolean,
+): Promise<void> {
+  const normalized = email.trim();
+  if (!normalized) return;
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+
+  const patch = converted
+    ? { converted: true, converted_at: now }
+    : { converted: false, converted_at: null };
+
+  const { data: updated, error } = await admin
+    .from("leads")
+    .update(patch)
+    .eq("email", normalized)
+    .select("id");
+  if (error) throw new Error(`lead_convert_failed: ${error.message}`);
+  if (updated && updated.length > 0) return;
+  if (!converted) return; // nothing to unconvert
+
+  const { error: insErr } = await admin.from("leads").insert({
+    source: "request",
+    email: normalized,
     converted: true,
     converted_at: now,
   });

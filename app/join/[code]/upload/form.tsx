@@ -585,8 +585,8 @@ export default function UploadForm({ code }: { code: string }) {
       </div>
       {uploading ? (
         <p className="microcopy" role="status" style={{ marginTop: 8 }}>
-          Don&apos;t close this website while photos upload — but feel free to
-          switch to another app or lock your phone. We&apos;ll notify you when
+          Don&apos;t close this website while photos upload — switching to
+          another app for a moment is fine. We&apos;ll notify you when
           everything&apos;s on the wall.
         </p>
       ) : null}

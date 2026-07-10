@@ -329,7 +329,8 @@ export default function HostDashboard({
           Photos kept 60 days after the event
         </div>
         <div className="info__body">
-          We&apos;ll remind you to download at day 50.
+          We&apos;ll email you download reminders 14 days and 3 days before
+          they&apos;re removed.
         </div>
       </div>
 

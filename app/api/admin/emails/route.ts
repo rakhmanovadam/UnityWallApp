@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminContext } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { setLeadConverted } from "@/lib/db/leads";
 
 export const runtime = "nodejs";
 
@@ -92,6 +93,51 @@ export async function GET(request: Request) {
     },
     pagination: { limit, offset },
   });
+}
+
+// Manual conversion checkbox. "Converted" strictly means "bought from
+// UnityWall" — nothing sets it automatically anymore (venue approval only
+// tags person_type), so this PATCH is the single write path.
+const PatchBody = z.object({
+  email: z.string().email().max(320),
+  converted: z.boolean(),
+});
+
+export async function PATCH(request: Request) {
+  const admin = await getAdminContext();
+  if (!admin) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const parsed = PatchBody.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
+
+  const email = parsed.data.email.trim().toLowerCase();
+  try {
+    await setLeadConverted(email, parsed.data.converted);
+  } catch {
+    return NextResponse.json({ error: "update_failed" }, { status: 500 });
+  }
+
+  const db = createAdminClient();
+  await db.from("audit_log").insert({
+    actor_id: admin.userId,
+    actor_email: admin.email,
+    action: "admin.set_converted",
+    target_table: "leads",
+    target_id: null,
+    meta: { email, converted: parsed.data.converted },
+  });
+
+  return NextResponse.json({ ok: true });
 }
 
 async function countBySource(
