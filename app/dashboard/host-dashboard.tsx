@@ -15,6 +15,7 @@ type Event = {
   allow_uploads: boolean;
   require_moderation: boolean;
   welcome_message: string | null;
+  cover_image_path: string | null;
 };
 
 export default function HostDashboard({
@@ -22,11 +23,13 @@ export default function HostDashboard({
   hostEmail,
   joinUrl,
   qrSvg,
+  coverUrl,
 }: {
   event: Event;
   hostEmail: string;
   joinUrl: string;
   qrSvg: string;
+  coverUrl: string | null;
 }) {
   const [event, setEvent] = useState(initialEvent);
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
@@ -149,7 +152,12 @@ export default function HostDashboard({
           </button>
         </div>
       ) : null}
-      <div className="host__cover cover__art--01" />
+      <BannerUpload
+        eventId={event.id}
+        initialUrl={coverUrl}
+        hasCover={Boolean(event.cover_image_path)}
+        onChanged={(path) => setEvent({ ...event, cover_image_path: path })}
+      />
 
       <div className="metrics">
         <div className="metric">
@@ -340,6 +348,172 @@ export default function HostDashboard({
         </span>
       </div>
     </section>
+  );
+}
+
+// Venue banner: shown to guests at the top of the upload page. Upload flow
+// mirrors guest photos — init mints a signed storage URL, the file PUTs
+// straight to the wall-covers bucket, then a PATCH pins cover_image_path.
+const BANNER_MAX_BYTES = 8_000_000;
+const BANNER_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function BannerUpload({
+  eventId,
+  initialUrl,
+  hasCover,
+  onChanged,
+}: {
+  eventId: string;
+  initialUrl: string | null;
+  hasCover: boolean;
+  onChanged: (path: string | null) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(initialUrl);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return;
+    if (!BANNER_TYPES.has(file.type)) {
+      setError("Use a JPEG, PNG, or WebP image.");
+      return;
+    }
+    if (file.size > BANNER_MAX_BYTES) {
+      setError("Max 8 MB — compress the image first.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const initRes = await fetch(
+        `/api/host/events/${encodeURIComponent(eventId)}/cover/init`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content_type: file.type, bytes: file.size }),
+        },
+      );
+      if (!initRes.ok) throw new Error("init");
+      const init = (await initRes.json()) as {
+        path: string;
+        upload_url: string;
+      };
+      const put = await fetch(init.upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!put.ok) throw new Error("put");
+      const patch = await fetch(
+        `/api/host/events/${encodeURIComponent(eventId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cover_image_path: init.path }),
+        },
+      );
+      if (!patch.ok) throw new Error("patch");
+      setPreview(URL.createObjectURL(file));
+      onChanged(init.path);
+    } catch {
+      setError("Upload failed. Try again.");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/host/events/${encodeURIComponent(eventId)}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cover_image_path: null }),
+        },
+      );
+      if (!res.ok) throw new Error("patch");
+      setPreview(null);
+      onChanged(null);
+    } catch {
+      setError("Couldn't remove it. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ margin: "18px 24px 0" }}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        hidden
+        onChange={(e) => void handleFile(e.target.files?.[0])}
+      />
+      {preview ? (
+        <img
+          src={preview}
+          alt="Venue banner"
+          style={{
+            display: "block",
+            width: "100%",
+            height: 150,
+            objectFit: "cover",
+            borderRadius: "var(--r-ctrl)",
+            border: "1px solid var(--hair)",
+          }}
+        />
+      ) : (
+        <div className="host__cover cover__art--01" style={{ margin: 0 }} />
+      )}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginTop: 8,
+        }}
+      >
+        <button
+          type="button"
+          className="ulink"
+          disabled={busy}
+          onClick={() => inputRef.current?.click()}
+          style={{ background: "none", border: 0, padding: 0 }}
+        >
+          {busy
+            ? "Working…"
+            : preview || hasCover
+              ? "Replace banner"
+              : "Upload a venue banner"}
+        </button>
+        {preview ? (
+          <button
+            type="button"
+            className="ulink"
+            disabled={busy}
+            onClick={() => void remove()}
+            style={{ background: "none", border: 0, padding: 0 }}
+          >
+            Remove
+          </button>
+        ) : null}
+      </div>
+      <p className="microcopy" style={{ marginTop: 4 }}>
+        Guests see this at the top of the &ldquo;Add your photos&rdquo; page.
+        JPEG, PNG, or WebP · max 8 MB.
+      </p>
+      {error ? (
+        <p className="microcopy" style={{ color: "#b8443b", marginTop: 4 }}>
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

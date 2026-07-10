@@ -909,6 +909,9 @@ a { color: inherit; text-decoration: none; }
   transition: width .35s ease;
 }
 
+/* The list grows with its content and the page (.screen--scroll) does the
+   scrolling — an inner overflow box here left the queue half-height with
+   dead space under it while items hid behind an internal scrollbar. */
 .upload__list {
   list-style: none;
   margin: 18px 0 0;
@@ -916,8 +919,18 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  overflow-y: auto;
-  flex: 1;
+  flex: 0 0 auto;
+}
+
+/* Host-uploaded venue banner shown above the upload heading. */
+.upload__banner {
+  display: block;
+  width: 100%;
+  max-height: 180px;
+  object-fit: cover;
+  border-radius: var(--r-card);
+  border: 1px solid var(--hair);
+  margin-bottom: 16px;
 }
 .uprow {
   display: flex;

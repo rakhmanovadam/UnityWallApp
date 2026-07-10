@@ -1,4 +1,5 @@
 import { getHostContext } from "@/lib/host-session";
+import { signedCoverUrl } from "@/lib/db/events";
 import { qrSvg } from "@/lib/qr";
 import { serverEnv } from "@/lib/env";
 import HostLoginForm from "./login-form";
@@ -51,6 +52,9 @@ export default async function DashboardPage() {
   const baseUrl = serverEnv().APP_BASE_URL.replace(/\/$/, "");
   const joinUrl = `${baseUrl}/join/${encodeURIComponent(event.code)}`;
   const qr = await qrSvg(joinUrl);
+  const coverUrl = event.cover_image_path
+    ? await signedCoverUrl(event.cover_image_path)
+    : null;
 
   return (
     <HostDashboard
@@ -58,6 +62,7 @@ export default async function DashboardPage() {
       hostEmail={host.email}
       joinUrl={joinUrl}
       qrSvg={qr}
+      coverUrl={coverUrl}
     />
   );
 }

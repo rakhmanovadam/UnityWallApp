@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type EventRow = {
   id: string;
@@ -36,4 +37,18 @@ export async function getLiveEventByCode(code: string): Promise<EventRow | null>
     .maybeSingle<EventRow>();
   if (error) return null;
   return data ?? null;
+}
+
+// Signed display URL for a host-uploaded venue banner (wall-covers bucket is
+// private, same as photos/thumbs). 1h expiry matches the thumb signer.
+export async function signedCoverUrl(
+  path: string,
+  expiresInSeconds = 3600,
+): Promise<string | null> {
+  const admin = createAdminClient();
+  const { data, error } = await admin.storage
+    .from("wall-covers")
+    .createSignedUrl(path, expiresInSeconds);
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
 }
