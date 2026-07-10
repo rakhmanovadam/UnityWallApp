@@ -174,6 +174,33 @@ export function signInEmail(opts: { magicLink: string; audience: "admin" | "host
   };
 }
 
+// Sent when an existing admin invites a new team member to the admin
+// console. Access is invitation-only: the invitee's account is created (or
+// promoted) with role=admin server-side, and this link signs them in.
+export function adminInviteEmail(opts: {
+  magicLink: string;
+  invitedBy: string;
+}) {
+  return {
+    subject: "You've been invited to the UnityWall admin console",
+    text: `${opts.invitedBy} invited you to the UnityWall admin console.\n\nTap the link below to sign in. No password — magic link only. It expires in 1 hour; after that, request a fresh link from the admin sign-in page.\n\n${opts.magicLink}\n\nIf you weren't expecting this, ignore this email.\n\n— UnityWall`,
+    html: `
+<!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
+  <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    <tr><td>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">Admin invitation</div>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">You're invited to the admin console</h1>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;"><strong>${escape(opts.invitedBy)}</strong> added you to the UnityWall admin team. Tap the button below to sign in. No password — magic link only.</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Open the admin console</a>
+      </p>
+      <p style="font-size:12px;color:#888;margin:24px 0 0;">Link expires in 1 hour — after that, request a fresh one from the admin sign-in page. If you weren't expecting this, ignore this email.</p>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  };
+}
+
 export function applicationDeclineEmail(opts: {
   venue: string;
   contact: string;

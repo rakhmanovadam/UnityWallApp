@@ -178,6 +178,9 @@ export default function AdminConsole({
       <div className="section-label">Collected emails</div>
       <MasterEmails initial={emails} />
 
+      <div className="section-label">Admin access</div>
+      <InviteAdmin />
+
       <div className="powered" style={{ marginTop: 28 }}>
         <span className="brandmark brandmark--xs" />
         <span>
@@ -193,6 +196,97 @@ export default function AdminConsole({
         </span>
       </div>
     </section>
+  );
+}
+
+// Invitation-only admin access: enter a team email, the server creates (or
+// promotes) the account with role=admin and emails a magic-link invite.
+function InviteAdmin() {
+  const [email, setEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  return (
+    <form
+      className="form"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const clean = email.trim().toLowerCase();
+        if (!/^\S+@\S+\.\S+$/.test(clean)) {
+          setNote({ ok: false, msg: "Enter a valid email." });
+          return;
+        }
+        setBusy(true);
+        setNote(null);
+        try {
+          const res = await fetch("/api/admin/invites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: clean }),
+          });
+          const data = (await res.json().catch(() => ({}))) as {
+            already_admin?: boolean;
+            error?: string;
+          };
+          if (res.ok) {
+            setNote({
+              ok: true,
+              msg: data.already_admin
+                ? `${clean} is already an admin — sent a fresh sign-in link.`
+                : `Invite sent to ${clean}. They're an admin as soon as they open it.`,
+            });
+            setEmail("");
+          } else if (data.error === "email_failed") {
+            setNote({
+              ok: false,
+              msg: "Role granted, but the invite email failed to send. Try again to resend.",
+            });
+          } else {
+            setNote({ ok: false, msg: "Couldn't send the invite. Try again." });
+          }
+        } catch {
+          setNote({ ok: false, msg: "Network error." });
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p className="microcopy">
+        Admin access is invitation-only. The invitee gets a magic-link email
+        and lands here with full admin rights — no password, no shared codes.
+      </p>
+      <label className="label" htmlFor="invite-email">
+        Team email
+      </label>
+      <div className="field">
+        <input
+          id="invite-email"
+          type="email"
+          autoComplete="off"
+          placeholder="teammate@unitywall.co"
+          required
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={busy}
+        />
+      </div>
+      {note ? (
+        <p
+          className="microcopy"
+          style={{ marginTop: 10, color: note.ok ? undefined : "#b8443b" }}
+        >
+          {note.msg}
+        </p>
+      ) : null}
+      <button
+        type="submit"
+        className="btn btn--secondary"
+        style={{ marginTop: 14 }}
+        disabled={busy}
+      >
+        {busy ? "Sending…" : "Send admin invite"}
+      </button>
+    </form>
   );
 }
 
