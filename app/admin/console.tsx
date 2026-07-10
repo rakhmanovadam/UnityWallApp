@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import MasterEmails, {
   type MasterRow,
@@ -201,10 +201,28 @@ export default function AdminConsole({
 
 // Invitation-only admin access: enter a team email, the server creates (or
 // promotes) the account with role=admin and emails a magic-link invite.
+type AdminUser = { email: string; created_at: string; is_you: boolean };
+
 function InviteAdmin() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [admins, setAdmins] = useState<AdminUser[] | null>(null);
+
+  const loadAdmins = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/invites");
+      if (!res.ok) return;
+      const data = (await res.json()) as { admins: AdminUser[] };
+      setAdmins(data.admins);
+    } catch {
+      // Non-fatal — the invite form still works without the roster.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAdmins();
+  }, [loadAdmins]);
 
   return (
     <form
@@ -236,6 +254,7 @@ function InviteAdmin() {
                 : `Invite sent to ${clean}. They're an admin as soon as they open it.`,
             });
             setEmail("");
+            void loadAdmins();
           } else if (data.error === "email_failed") {
             setNote({
               ok: false,
@@ -251,6 +270,24 @@ function InviteAdmin() {
         }
       }}
     >
+      {admins && admins.length > 0 ? (
+        <div className="adminlist">
+          <div className="adminlist__label">
+            {admins.length} {admins.length === 1 ? "admin" : "admins"} with
+            console access
+          </div>
+          <ul className="adminlist__rows" role="list">
+            {admins.map((a) => (
+              <li className="adminlist__row" key={a.email}>
+                <span className="adminlist__email">{a.email}</span>
+                {a.is_you ? (
+                  <span className="adminlist__tag">you</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       <p className="microcopy">
         Admin access is invitation-only. The invitee gets a magic-link email
         and lands here with full admin rights — no password, no shared codes.

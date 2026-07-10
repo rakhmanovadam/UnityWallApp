@@ -16,6 +16,39 @@ const Body = z.object({
   email: z.string().email().max(320),
 });
 
+// Roster of everyone who currently holds admin role — rendered under the
+// invite form so an admin can see who else has console access. Walks the
+// paginated auth admin listing (capped) and filters on app_metadata.role.
+export async function GET() {
+  const admin = await getAdminContext();
+  if (!admin) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const db = createAdminClient();
+  const admins: { email: string; created_at: string; is_you: boolean }[] = [];
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await db.auth.admin.listUsers({
+      page,
+      perPage: 200,
+    });
+    if (error || !data) break;
+    for (const u of data.users) {
+      const role = (u.app_metadata as { role?: string } | undefined)?.role;
+      if (role === "admin" && u.email) {
+        admins.push({
+          email: u.email,
+          created_at: u.created_at ?? "",
+          is_you: u.id === admin.userId,
+        });
+      }
+    }
+    if (data.users.length < 200) break;
+  }
+  admins.sort((a, b) => a.email.localeCompare(b.email));
+  return NextResponse.json({ admins });
+}
+
 export async function POST(request: Request) {
   const admin = await getAdminContext();
   if (!admin) {

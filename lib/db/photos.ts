@@ -196,6 +196,41 @@ export async function listApprovedPhotos(opts: {
   };
 }
 
+// Guest self-service delete. Verifies the photo belongs to this guest + event
+// before removing storage objects (full + thumb) and the row. Storage removal
+// is best-effort — a lingering object never blocks the row delete. Returns
+// false when the photo is missing or not owned by this guest, so the caller
+// can 404 without leaking whether the id exists.
+export async function deleteOwnPhoto(opts: {
+  photoId: string;
+  eventId: string;
+  guestId: string;
+}): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data: photo, error } = await admin
+    .from("photos")
+    .select("id, event_id, guest_id, storage_path, thumb_path")
+    .eq("id", opts.photoId)
+    .maybeSingle();
+  if (error || !photo) return false;
+  if (photo.event_id !== opts.eventId || photo.guest_id !== opts.guestId) {
+    return false;
+  }
+
+  if (photo.storage_path) {
+    await admin.storage.from(PHOTOS_BUCKET).remove([photo.storage_path]);
+  }
+  if (photo.thumb_path) {
+    await admin.storage.from(THUMBS_BUCKET).remove([photo.thumb_path]);
+  }
+
+  const { error: delErr } = await admin
+    .from("photos")
+    .delete()
+    .eq("id", opts.photoId);
+  return !delErr;
+}
+
 export async function getApprovedThumbForPhoto(opts: {
   photoId: string;
   eventId: string;

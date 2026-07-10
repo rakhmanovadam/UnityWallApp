@@ -976,6 +976,48 @@ a { color: inherit; text-decoration: none; }
   border-top-color: var(--dusk);
   animation: uwSpin .8s linear infinite;
 }
+.adminlist { margin: 4px 0 16px; }
+.adminlist__label {
+  font: 600 12px/1 var(--font-sans);
+  letter-spacing: .04em;
+  color: var(--mute);
+  margin-bottom: 8px;
+}
+.adminlist__rows { list-style: none; margin: 0; padding: 0; }
+.adminlist__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--hair-2);
+}
+.adminlist__row:last-child { border-bottom: 0; }
+.adminlist__email {
+  font: 500 13px/1.2 var(--font-sans);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adminlist__tag {
+  font: 600 10px/1 var(--font-sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--dusk);
+  background: rgba(58,86,118,.12);
+  padding: 3px 6px;
+  border-radius: 6px;
+}
+.uprow__done {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.uprow__remove {
+  font: 600 12px/1 var(--font-sans);
+  color: var(--mute);
+}
+.uprow__remove:disabled { opacity: .5; }
 .uprow--queued { opacity: .5; }
 .uprow--queued .uprow__name { color: var(--mute); }
 .uprow--queued .uprow__meta { color: var(--mute-2); }

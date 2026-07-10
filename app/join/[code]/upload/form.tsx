@@ -104,6 +104,9 @@ export default function UploadForm({ code }: { code: string }) {
   const [speed, setSpeed] = useState(0);
   const speedSampleRef = useRef<{ t: number; loaded: number } | null>(null);
   const speedRef = useRef(0);
+  // Ids currently being deleted, so the row's Remove button shows progress and
+  // can't be double-fired.
+  const [removing, setRemoving] = useState<Set<string>>(new Set());
 
   // File objects live outside React state — putting them in state would blow
   // out re-renders and set us up for stale-file bugs on retry. The map is
@@ -488,6 +491,35 @@ export default function UploadForm({ code }: { code: string }) {
     if (inputRef.current) inputRef.current.value = "";
   }
 
+  // Remove a photo the guest already landed on the wall. Only "done" rows
+  // carry a photoId; the server re-checks ownership against the guest cookie,
+  // so a tampered id just 404s. On success (or a 404 — already gone) the row
+  // and its cached File are dropped.
+  async function removePhoto(id: string) {
+    const item = items.find((it) => it.id === id);
+    if (!item?.photoId) return;
+    setRemoving((prev) => new Set(prev).add(id));
+    try {
+      const res = await fetch("/api/uploads/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ photo_id: item.photoId }),
+      });
+      if (res.ok || res.status === 404) {
+        filesRef.current.delete(id);
+        setItems((prev) => prev.filter((it) => it.id !== id));
+      }
+    } catch {
+      // Leave the row in place so the guest can try again.
+    } finally {
+      setRemoving((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
+  }
+
   function retry(id: string) {
     const item = items.find((it) => it.id === id);
     if (!item) return;
@@ -611,7 +643,18 @@ export default function UploadForm({ code }: { code: string }) {
               <div className="uprow__meta">{metaFor(it)}</div>
             </div>
             {it.status === "done" ? (
-              <span className="uprow__state uprow__state--done">✓</span>
+              <div className="uprow__done">
+                <span className="uprow__state uprow__state--done">✓</span>
+                <button
+                  type="button"
+                  className="ulink uprow__remove"
+                  onClick={() => removePhoto(it.id)}
+                  disabled={removing.has(it.id)}
+                  aria-label={`Remove ${it.name} from the wall`}
+                >
+                  {removing.has(it.id) ? "Removing…" : "Remove"}
+                </button>
+              </div>
             ) : it.status === "error" ? (
               <button
                 type="button"

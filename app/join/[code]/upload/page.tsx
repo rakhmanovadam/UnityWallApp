@@ -28,7 +28,10 @@ export default async function JoinUploadPage({ params }: { params: Params }) {
 
       <UploadForm code={event.code} />
 
-      <div className="spacer" />
+      {/* Fixed gap, not the flex:1 .spacer — otherwise a short queue leaves a
+          big dead band before this button and the list stops mid-page. The
+          list now flows straight into the button and the page scrolls. */}
+      <div style={{ height: 28, flex: "0 0 auto" }} />
       <Link
         className="btn btn--secondary"
         href={`/join/${encodeURIComponent(event.code)}/wall`}
