@@ -398,6 +398,47 @@ export default function UploadForm({ code }: { code: string }) {
     }
   }
 
+  // Browser notification when the batch finishes while the guest is in
+  // another app/tab. Permission is requested at upload start (a user
+  // gesture just happened, so the prompt isn't out of the blue). Note: on
+  // iOS Safari the Notification API only exists for installed home-screen
+  // web apps — the `"Notification" in window` guard makes it a quiet no-op
+  // there.
+  const batchActiveRef = useRef(false);
+  useEffect(() => {
+    const total = items.length;
+    if (total === 0) return;
+    const done = items.filter((i) => i.status === "done").length;
+    const errored = items.filter((i) => i.status === "error").length;
+    const active = done + errored < total;
+
+    if (active && !batchActiveRef.current) {
+      batchActiveRef.current = true;
+      if ("Notification" in window && Notification.permission === "default") {
+        void Notification.requestPermission();
+      }
+    } else if (!active && batchActiveRef.current) {
+      batchActiveRef.current = false;
+      if (
+        document.visibilityState === "hidden" &&
+        "Notification" in window &&
+        Notification.permission === "granted"
+      ) {
+        try {
+          new Notification("UnityWall", {
+            body:
+              errored > 0
+                ? `${done} photo${done === 1 ? "" : "s"} on the wall · ${errored} need a retry`
+                : `All ${done} photo${done === 1 ? "" : "s"} are on the wall 🎉`,
+          });
+        } catch {
+          // Some browsers require a service worker for constructor
+          // notifications; nothing to do — the in-page status still shows.
+        }
+      }
+    }
+  }, [items]);
+
   // Kick the worker whenever queued items appear or the network comes back.
   useEffect(() => {
     const hasQueued = items.some(
@@ -544,8 +585,9 @@ export default function UploadForm({ code }: { code: string }) {
       </div>
       {uploading ? (
         <p className="microcopy" role="status" style={{ marginTop: 8 }}>
-          You can lock your phone or hop to another app — just keep this tab
-          open until every photo says &ldquo;on the wall.&rdquo;
+          Don&apos;t close this website while photos upload — but feel free to
+          switch to another app or lock your phone. We&apos;ll notify you when
+          everything&apos;s on the wall.
         </p>
       ) : null}
 

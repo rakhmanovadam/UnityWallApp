@@ -8,19 +8,22 @@ export default function SignOutRow({ email }: { email: string }) {
   const [busy, setBusy] = useState(false);
 
   return (
-    <p className="microcopy center">
-      Signed in as <strong>{email}</strong> ·{" "}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "flex-end",
+        gap: 10,
+        padding: "14px 20px 0",
+      }}
+    >
+      <span className="microcopy" style={{ margin: 0 }}>
+        Signed in as <strong>{email}</strong>
+      </span>
       <button
         type="button"
-        className="ulink"
+        className="btn btn--ghost btn--sm"
         disabled={busy}
-        style={{
-          background: "none",
-          border: "none",
-          padding: 0,
-          font: "inherit",
-          cursor: "pointer",
-        }}
         onClick={async () => {
           setBusy(true);
           await supabase.auth.signOut();
@@ -29,6 +32,6 @@ export default function SignOutRow({ email }: { email: string }) {
       >
         {busy ? "Signing out…" : "Sign out"}
       </button>
-    </p>
+    </div>
   );
 }

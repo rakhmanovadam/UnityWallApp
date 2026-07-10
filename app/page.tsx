@@ -10,6 +10,7 @@ export default async function HomePage() {
 
   return (
     <section className="screen screen--scroll">
+      {user?.email ? <SignOutRow email={user.email} /> : null}
       <div className="home__top">
         <span className="brandmark brandmark--md home__mark" />
         <h1 className="display home__h">
@@ -47,8 +48,6 @@ export default async function HomePage() {
         </div>
         <span className="home-tile__arrow">→</span>
       </Link>
-
-      {user?.email ? <SignOutRow email={user.email} /> : null}
 
       <div className="home__foot">
         <span className="brandmark brandmark--xs" />
