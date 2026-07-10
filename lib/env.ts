@@ -33,6 +33,20 @@ export function serverEnv() {
       // Optional so local dev / preview without a cron still boots.
       CRON_SECRET: z.string().min(16).optional(),
     })
+    // Fail closed in production: without Upstash, rateLimit() silently no-ops
+    // (lib/rate-limit.ts), so a missing var would mean zero rate limiting with
+    // no visible signal. Require both vars in prod; dev/test keep the no-op
+    // fallback for local convenience.
+    .superRefine((val, ctx) => {
+      if (process.env.NODE_ENV !== "production") return;
+      if (!val.UPSTASH_REDIS_REST_URL || !val.UPSTASH_REDIS_REST_TOKEN) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message:
+            "UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required in production (rate limiting fails closed).",
+        });
+      }
+    })
     .parse({
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
       SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
