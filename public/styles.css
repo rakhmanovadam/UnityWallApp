@@ -873,12 +873,30 @@ a { color: inherit; text-decoration: none; }
 }
 .dropzone:hover { background: #F1E6DB; border-color: var(--dusk); }
 .dropzone__plus {
+  position: relative;
   width: 44px; height: 44px;
   border-radius: 50%;
   background: var(--dusk);
   color: var(--dusk-bg);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 24px; font-weight: 400;
+  /* Plus drawn with pseudo-elements instead of the "+" glyph so it is
+     pixel-centered regardless of the font's glyph metrics. */
+  font-size: 0;
+}
+.dropzone__plus::before,
+.dropzone__plus::after {
+  content: "";
+  position: absolute;
+  top: 50%; left: 50%;
+  background: var(--dusk-bg);
+  border-radius: 1px;
+}
+.dropzone__plus::before {
+  width: 18px; height: 2.5px;
+  transform: translate(-50%, -50%);
+}
+.dropzone__plus::after {
+  width: 2.5px; height: 18px;
+  transform: translate(-50%, -50%);
 }
 .dropzone__t {
   font: 600 13px/1 var(--font-sans);
