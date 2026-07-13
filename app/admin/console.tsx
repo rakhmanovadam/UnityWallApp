@@ -6,6 +6,7 @@ import MasterEmails, {
   type MasterRow,
   type FunnelCounts,
 } from "./master-emails";
+import AdminVenues from "./venues";
 
 type Application = {
   id: string;
@@ -175,6 +176,12 @@ export default function AdminConsole({
         />
       ) : null}
 
+      <div className="section-label">Venues</div>
+      <AdminVenues />
+
+      <div className="section-label">Leads by event</div>
+      <LeadsByEvent />
+
       <div className="section-label">Collected emails</div>
       <MasterEmails initial={emails} />
 
@@ -196,6 +203,125 @@ export default function AdminConsole({
         </span>
       </div>
     </section>
+  );
+}
+
+// Leads grouped by the event that produced them. When several events run the
+// same day this is how an admin tells the leads apart — each row is attributed
+// to its originating wall (code + couple name), with unattributed leads (no
+// event captured, e.g. venue applications) bucketed separately.
+type Lead = {
+  id: string;
+  source: string;
+  email: string | null;
+  name: string | null;
+  phone: string | null;
+  status: string | null;
+  created_at: string;
+  event_id: string | null;
+  event_code: string | null;
+  event_name: string | null;
+};
+
+function LeadsByEvent() {
+  const [leads, setLeads] = useState<Lead[] | null>(null);
+  const [err, setErr] = useState(false);
+
+  useEffect(() => {
+    let on = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/leads");
+        if (!res.ok) {
+          if (on) setErr(true);
+          return;
+        }
+        const data = (await res.json()) as { items: Lead[] };
+        if (on) setLeads(data.items);
+      } catch {
+        if (on) setErr(true);
+      }
+    })();
+    return () => {
+      on = false;
+    };
+  }, []);
+
+  if (err) {
+    return (
+      <div className="info">
+        <div className="info__body">Couldn&apos;t load leads. Refresh.</div>
+      </div>
+    );
+  }
+  if (!leads) {
+    return (
+      <div className="info">
+        <div className="info__body">Loading leads…</div>
+      </div>
+    );
+  }
+  if (leads.length === 0) {
+    return (
+      <div className="info">
+        <div className="info__head">
+          <span className="dot dot--dusk" />
+          No leads yet
+        </div>
+      </div>
+    );
+  }
+
+  // Group by event. Key on event_id (stable) but label with code + name.
+  const groups = new Map<
+    string,
+    { label: string; sub: string; leads: Lead[] }
+  >();
+  for (const l of leads) {
+    const key = l.event_id ?? "__none__";
+    if (!groups.has(key)) {
+      groups.set(key, {
+        label: l.event_code ?? "Unattributed",
+        sub: l.event_name ?? "No event captured (applications / anonymous)",
+        leads: [],
+      });
+    }
+    groups.get(key)!.leads.push(l);
+  }
+  const ordered = [...groups.values()].sort(
+    (a, b) => b.leads.length - a.leads.length,
+  );
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      {ordered.map((g) => (
+        <details key={g.label + g.sub} className="appcard" open={ordered.length <= 3}>
+          <summary style={{ cursor: "pointer", listStyle: "none" }}>
+            <div className="appcard__t">
+              {g.label}{" "}
+              <span className="adminlist__tag">{g.leads.length}</span>
+            </div>
+            <div className="appcard__sub">{g.sub}</div>
+          </summary>
+          <ul className="adminlist__rows" role="list" style={{ marginTop: 10 }}>
+            {g.leads.map((l) => (
+              <li className="adminlist__row" key={l.id}>
+                <span className="adminlist__email">
+                  {l.email ?? l.name ?? "anonymous"}
+                </span>
+                <span
+                  className="adminlist__tag"
+                  data-temp={l.source}
+                  style={{ textTransform: "capitalize" }}
+                >
+                  {l.source}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </div>
   );
 }
 
