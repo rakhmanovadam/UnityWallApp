@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import { renderCoupleDisplay } from "@/lib/render";
+import {
+  THEME_FONTS,
+  THEME_DEFAULTS,
+  type ThemeFontKey,
+} from "@/lib/venue-theme";
 
 type Event = {
   id: string;
@@ -14,8 +19,13 @@ type Event = {
   wall_layout: string;
   allow_uploads: boolean;
   require_moderation: boolean;
+  max_uploads_per_guest: number;
   welcome_message: string | null;
   cover_image_path: string | null;
+  theme_primary: string | null;
+  theme_accent: string | null;
+  theme_bg: string | null;
+  theme_font: string | null;
 };
 
 export default function HostDashboard({
@@ -309,6 +319,13 @@ export default function HostDashboard({
         </button>
       </div>
 
+      <UploadLimit
+        value={event.max_uploads_per_guest}
+        onCommit={(n) => patch({ max_uploads_per_guest: n })}
+      />
+
+      <VenueDesign event={event} onPatch={patch} />
+
       <Link
         className="row row--toggle"
         href="/dashboard/slideshow"
@@ -326,11 +343,11 @@ export default function HostDashboard({
       <div className="info">
         <div className="info__head">
           <span className="dot dot--dusk" />
-          Photos kept 60 days after the event
+          Your wall closes 60 days after the event
         </div>
         <div className="info__body">
-          We&apos;ll email you download reminders 14 days and 3 days before
-          they&apos;re removed.
+          We&apos;ll email you closing reminders 14 days and 3 days before it
+          goes offline and photos are removed.
         </div>
       </div>
 
@@ -349,6 +366,158 @@ export default function HostDashboard({
         </span>
       </div>
     </section>
+  );
+}
+
+// Per-guest upload cap. A stepper + number input; commits to the server on
+// blur / button so dragging the value doesn't fire a PATCH per keystroke.
+function UploadLimit({
+  value,
+  onCommit,
+}: {
+  value: number;
+  onCommit: (n: number) => void;
+}) {
+  const [draft, setDraft] = useState(String(value));
+
+  function commit(raw: string) {
+    const n = Math.max(1, Math.min(500, Math.round(Number(raw) || 0)));
+    setDraft(String(n));
+    if (n !== value) onCommit(n);
+  }
+
+  return (
+    <div className="row row--toggle">
+      <div>
+        <div className="row__t">Photos per guest</div>
+        <div className="row__sub">Max each person can upload · default 40</div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          aria-label="Fewer"
+          onClick={() => commit(String((Number(draft) || 0) - 5))}
+        >
+          −
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={500}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={(e) => commit(e.target.value)}
+          style={{
+            width: 60,
+            textAlign: "center",
+            padding: "8px 6px",
+            border: "1px solid var(--hair-3)",
+            borderRadius: "var(--r-ctrl)",
+            background: "var(--paper-3)",
+            font: "600 15px/1 var(--font-sans)",
+            color: "var(--ink)",
+          }}
+        />
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
+          aria-label="More"
+          onClick={() => commit(String((Number(draft) || 0) + 5))}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Venue design: primary/accent/background colors + a heading font preset.
+// Colors commit on blur of the native color input; the font commits on select.
+// A tiny live swatch reflects the current palette. Passing the default value
+// clears the override server-side is not needed — hosts always send a concrete
+// value here, and "default" font maps to no override in venueThemeStyle.
+function VenueDesign({
+  event,
+  onPatch,
+}: {
+  event: Event;
+  onPatch: (p: Partial<Event>) => void;
+}) {
+  const primary = event.theme_primary ?? THEME_DEFAULTS.primary;
+  const accent = event.theme_accent ?? THEME_DEFAULTS.accent;
+  const bg = event.theme_bg ?? THEME_DEFAULTS.bg;
+  const font = (event.theme_font ?? "default") as ThemeFontKey;
+
+  const swatch = (label: string, value: string, onChange: (v: string) => void) => (
+    <label
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 6,
+        flex: 1,
+      }}
+    >
+      <input
+        type="color"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: 44,
+          height: 44,
+          padding: 0,
+          border: "1px solid var(--hair-3)",
+          borderRadius: "50%",
+          background: "none",
+          cursor: "pointer",
+        }}
+      />
+      <span className="microcopy" style={{ margin: 0 }}>
+        {label}
+      </span>
+    </label>
+  );
+
+  return (
+    <div className="card card--layouts">
+      <div className="kicker kicker--mute">Venue design</div>
+      <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+        {swatch("Primary", primary, (v) => onPatch({ theme_primary: v }))}
+        {swatch("Accent", accent, (v) => onPatch({ theme_accent: v }))}
+        {swatch("Background", bg, (v) => onPatch({ theme_bg: v }))}
+      </div>
+      <label className="label" htmlFor="theme-font" style={{ marginTop: 16 }}>
+        Heading font
+      </label>
+      <div className="field">
+        <select
+          id="theme-font"
+          value={font}
+          onChange={(e) =>
+            onPatch({ theme_font: e.target.value as ThemeFontKey })
+          }
+          style={{
+            width: "100%",
+            padding: "10px 12px",
+            border: 0,
+            background: "transparent",
+            font: "inherit",
+            color: "var(--ink)",
+          }}
+        >
+          {(Object.keys(THEME_FONTS) as ThemeFontKey[]).map((k) => (
+            <option key={k} value={k}>
+              {THEME_FONTS[k].label}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="microcopy" style={{ marginTop: 10 }}>
+        Applies to your guest wall. Guests see it the moment you change it.
+      </p>
+    </div>
   );
 }
 

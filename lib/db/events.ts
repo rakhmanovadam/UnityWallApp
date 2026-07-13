@@ -16,10 +16,14 @@ export type EventRow = {
   cover_image_path: string | null;
   retention_days: number;
   delete_after: string | null;
+  theme_primary: string | null;
+  theme_accent: string | null;
+  theme_bg: string | null;
+  theme_font: string | null;
 };
 
 const COLS =
-  "id, code, couple_display, couple_html, when_text, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, status, welcome_message, cover_image_path, retention_days, delete_after";
+  "id, code, couple_display, couple_html, when_text, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, status, welcome_message, cover_image_path, retention_days, delete_after, theme_primary, theme_accent, theme_bg, theme_font";
 
 export function normalizeCode(input: string) {
   return input.trim().toUpperCase().replace(/\s+/g, "-");

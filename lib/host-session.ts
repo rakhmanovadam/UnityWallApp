@@ -13,10 +13,15 @@ export type HostContext = {
     wall_layout: string;
     allow_uploads: boolean;
     require_moderation: boolean;
+    max_uploads_per_guest: number;
     welcome_message: string | null;
     cover_image_path: string | null;
     retention_days: number;
     delete_after: string | null;
+    theme_primary: string | null;
+    theme_accent: string | null;
+    theme_bg: string | null;
+    theme_font: string | null;
   }>;
 };
 
@@ -33,7 +38,7 @@ export async function getHostContext(): Promise<HostContext | null> {
   const { data: events } = await admin
     .from("events")
     .select(
-      "id, code, couple_display, when_text, status, wall_layout, allow_uploads, require_moderation, welcome_message, cover_image_path, retention_days, delete_after",
+      "id, code, couple_display, when_text, status, wall_layout, allow_uploads, require_moderation, max_uploads_per_guest, welcome_message, cover_image_path, retention_days, delete_after, theme_primary, theme_accent, theme_bg, theme_font",
     )
     .eq("host_user_id", auth.user.id)
     .order("created_at", { ascending: false });
