@@ -169,6 +169,26 @@ export default function MasterEmails({
     }
   }
 
+  // Download the current (filtered) result set as CSV. Reuses the same query
+  // params as the table fetch minus pagination; the server streams every
+  // matching row, not just the visible page.
+  function exportCsv() {
+    const params = new URLSearchParams();
+    if (debouncedQ) params.set("q", debouncedQ);
+    if (temperature) params.set("temperature", temperature);
+    if (personType) params.set("person_type", personType);
+    if (converted) params.set("converted", converted);
+    params.set("format", "csv");
+    // Anchor with download attr — same-origin, auth cookie rides along, and
+    // the Content-Disposition header names the file.
+    const a = document.createElement("a");
+    a.href = `/api/admin/emails?${params.toString()}`;
+    a.download = "unitywall-emails.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
   function clearFilters() {
     setQ("");
     setDebouncedQ("");
@@ -275,6 +295,20 @@ export default function MasterEmails({
             Clear
           </button>
         ) : null}
+        <button
+          type="button"
+          className="btn btn--inline"
+          onClick={exportCsv}
+          disabled={total === 0}
+          title={
+            hasFilters
+              ? "Download the filtered emails as CSV"
+              : "Download all collected emails as CSV"
+          }
+          style={{ marginLeft: "auto" }}
+        >
+          Export CSV{hasFilters ? " (filtered)" : ""}
+        </button>
       </div>
 
       {/* Table */}

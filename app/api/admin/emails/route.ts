@@ -25,7 +25,23 @@ const Query = z.object({
   converted: z.enum(["true", "false"]).optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).max(100_000).optional(),
+  // format=csv streams every matching row (filters honoured, pagination
+  // ignored) as a downloadable CSV instead of the paged JSON payload.
+  format: z.enum(["json", "csv"]).optional(),
 });
+
+// Hard ceiling on a single CSV export so a runaway view can't buffer an
+// unbounded string into memory. The master-email view is small; this is a
+// safety net, not an expected limit.
+const CSV_MAX_ROWS = 50_000;
+
+// RFC 4180 field: wrap in quotes and double any embedded quote when the value
+// contains a comma, quote, or newline. Nullish becomes empty.
+function csvField(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
 
 export async function GET(request: Request) {
   const admin = await getAdminContext();
@@ -46,6 +62,7 @@ export async function GET(request: Request) {
     converted,
     limit = 100,
     offset = 0,
+    format = "json",
   } = parsed.data;
 
   const db = createAdminClient();
@@ -61,6 +78,14 @@ export async function GET(request: Request) {
     // Two-column ilike via .or so the search box hits both name and email.
     const like = `%${q.replace(/[,%()]/g, "")}%`;
     query = query.or(`email.ilike.${like},name.ilike.${like}`);
+  }
+
+  if (format === "csv") {
+    const { data, error } = await query.range(0, CSV_MAX_ROWS - 1);
+    if (error) {
+      return NextResponse.json({ error: "list_failed" }, { status: 500 });
+    }
+    return csvResponse((data ?? []) as MasterEmailRow[]);
   }
 
   query = query.range(offset, offset + limit - 1);
@@ -138,6 +163,55 @@ export async function PATCH(request: Request) {
   });
 
   return NextResponse.json({ ok: true });
+}
+
+// Shape of a row from the admin_master_emails view — mirrors MasterRow on the
+// client. Only used to type the CSV serializer.
+type MasterEmailRow = {
+  email: string;
+  name: string | null;
+  lead_temperature: string;
+  person_type: string;
+  converted: boolean;
+  converted_at: string | null;
+  marketing_opt_in: boolean;
+  joined_at: string | null;
+  photos_uploaded: number;
+  verified_events: number;
+};
+
+// Ordered columns for the export. Header label + how to pull the value.
+const CSV_COLUMNS: Array<{
+  header: string;
+  get: (r: MasterEmailRow) => unknown;
+}> = [
+  { header: "email", get: (r) => r.email },
+  { header: "name", get: (r) => r.name },
+  { header: "lead_temperature", get: (r) => r.lead_temperature },
+  { header: "person_type", get: (r) => r.person_type },
+  { header: "converted", get: (r) => (r.converted ? "yes" : "no") },
+  { header: "converted_at", get: (r) => r.converted_at },
+  { header: "marketing_opt_in", get: (r) => (r.marketing_opt_in ? "yes" : "no") },
+  { header: "joined_at", get: (r) => r.joined_at },
+  { header: "photos_uploaded", get: (r) => r.photos_uploaded },
+  { header: "verified_events", get: (r) => r.verified_events },
+];
+
+function csvResponse(rows: MasterEmailRow[]): Response {
+  const lines = [CSV_COLUMNS.map((c) => c.header).join(",")];
+  for (const row of rows) {
+    lines.push(CSV_COLUMNS.map((c) => csvField(c.get(row))).join(","));
+  }
+  // Leading BOM so Excel opens UTF-8 names correctly.
+  const body = "﻿" + lines.join("\r\n") + "\r\n";
+  return new Response(body, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/csv; charset=utf-8",
+      "Content-Disposition": `attachment; filename="unitywall-emails.csv"`,
+      "Cache-Control": "no-store",
+    },
+  });
 }
 
 async function countBySource(
