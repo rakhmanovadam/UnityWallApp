@@ -390,7 +390,7 @@ function UploadLimit({
     <div className="row row--toggle">
       <div>
         <div className="row__t">Photos per guest</div>
-        <div className="row__sub">Max each person can upload · default 40</div>
+        <div className="row__sub">Max each person can upload · default 50</div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <button
