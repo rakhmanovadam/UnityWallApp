@@ -90,7 +90,7 @@ export default function AdminConsole({
       : "—";
 
   return (
-    <section className="screen screen--scroll">
+    <section className="screen screen--scroll screen--admin">
       <div className="admin__top">
         <div>
           <span className="kicker kicker--dusk">UnityWall · Admin</span>
