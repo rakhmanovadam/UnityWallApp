@@ -16,14 +16,42 @@ type SendArgs = {
   text?: string;
 };
 
+// Company + app links appended to the bottom of every outbound email. The
+// marketing site is a fixed domain; the public app URL comes from the env so
+// it tracks whatever domain the app is deployed on.
+const COMPANY_URL = "https://unitywall.co";
+const COMPANY_NAME = "UnityWall Technological Solutions, LLC";
+
+function emailFooter(appUrl: string) {
+  const app = appUrl.replace(/\/$/, "");
+  const html = `
+  <table style="max-width:480px;margin:16px auto 0;border-top:1px solid #eee;padding-top:14px;">
+    <tr><td style="text-align:center;font-family:Helvetica,Arial,sans-serif;font-size:12px;color:#888;line-height:1.6;">
+      Visit <a href="${COMPANY_URL}" style="color:#3A5676;text-decoration:none;">${COMPANY_NAME}</a><br>
+      Visit <a href="${app}" style="color:#3A5676;text-decoration:none;">Unitywalls</a>
+    </td></tr>
+  </table>`;
+  const text = `\n\nVisit ${COMPANY_NAME}: ${COMPANY_URL}\nVisit Unitywalls: ${app}\n`;
+  return { html, text };
+}
+
 export async function sendEmail({ to, subject, html, text }: SendArgs) {
   const env = serverEnv();
+  const footer = emailFooter(env.APP_BASE_URL);
+  // Slot the footer just before </body> so it lands inside the email shell;
+  // fall back to appending if a template has no </body>.
+  const htmlWithFooter = html.includes("</body>")
+    ? html.replace("</body>", `${footer.html}</body>`)
+    : `${html}${footer.html}`;
+  const textWithFooter =
+    text != null ? `${text}${footer.text}` : undefined;
+
   const result = await client().emails.send({
     from: env.RESEND_FROM,
     to,
     subject,
-    html,
-    text,
+    html: htmlWithFooter,
+    text: textWithFooter,
   });
   // Resend returns {data, error} — a silent-failure trap if the caller doesn't
   // check `error`. Throw here so failed sends surface at the API layer instead

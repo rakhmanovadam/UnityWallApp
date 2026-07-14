@@ -46,6 +46,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             {children}
           </main>
         </div>
+        <footer className="site-footer">
+          <a
+            className="site-footer__link"
+            href="https://unitywall.co"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            © Unitywalls · unitywall.co
+          </a>
+        </footer>
       </body>
     </html>
   );

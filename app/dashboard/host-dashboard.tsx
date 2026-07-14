@@ -451,7 +451,7 @@ function VenueDesign({
   const font = (event.theme_font ?? "default") as ThemeFontKey;
 
   const swatch = (label: string, value: string, onChange: (v: string) => void) => (
-    <label
+    <div
       style={{
         display: "flex",
         flexDirection: "column",
@@ -464,6 +464,7 @@ function VenueDesign({
         type="color"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        aria-label={`${label} color`}
         style={{
           width: 44,
           height: 44,
@@ -477,7 +478,8 @@ function VenueDesign({
       <span className="microcopy" style={{ margin: 0 }}>
         {label}
       </span>
-    </label>
+      <HexInput label={label} value={value} onCommit={onChange} />
+    </div>
   );
 
   return (
@@ -518,6 +520,65 @@ function VenueDesign({
         Applies to your guest wall. Guests see it the moment you change it.
       </p>
     </div>
+  );
+}
+
+// Hex-code entry paired with a native color picker. Local text state lets the
+// host type a code freely; it commits only when it's a valid #RRGGBB, and it
+// re-syncs whenever the picker changes the value from outside.
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+function HexInput({
+  label,
+  value,
+  onCommit,
+}: {
+  label: string;
+  value: string;
+  onCommit: (v: string) => void;
+}) {
+  const [text, setText] = useState(value);
+
+  useEffect(() => {
+    setText(value);
+  }, [value]);
+
+  function commit(raw: string) {
+    let v = raw.trim();
+    if (v && !v.startsWith("#")) v = `#${v}`;
+    if (HEX_RE.test(v)) {
+      const norm = v.toLowerCase();
+      if (norm !== value.toLowerCase()) onCommit(norm);
+      setText(norm);
+    } else {
+      setText(value); // revert invalid entry
+    }
+  }
+
+  return (
+    <input
+      type="text"
+      value={text}
+      spellCheck={false}
+      autoCapitalize="none"
+      aria-label={`${label} hex code`}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={(e) => commit(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      style={{
+        width: 76,
+        textAlign: "center",
+        fontSize: 12,
+        fontFamily: "var(--font-mono, ui-monospace, monospace)",
+        padding: "4px 6px",
+        border: "1px solid var(--hair-3)",
+        borderRadius: "var(--r-ctrl)",
+        background: "var(--paper-3)",
+        color: "var(--ink)",
+        textTransform: "lowercase",
+      }}
+    />
   );
 }
 

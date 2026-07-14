@@ -2367,3 +2367,35 @@ a { color: inherit; text-decoration: none; }
     transition-duration: .001ms !important;
   }
 }
+
+/* Universal footer — present on every screen, links to the marketing site.
+   Fixed and centered so it stays visible; pointer-events limited to the link
+   itself so it never blocks taps on the app behind it. */
+.site-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom));
+  pointer-events: none;
+  z-index: 5;
+}
+.site-footer__link {
+  pointer-events: auto;
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  text-decoration: none;
+  background: rgba(250, 247, 242, 0.82);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--hair-3);
+  border-radius: 999px;
+  padding: 4px 12px;
+  box-shadow: 0 2px 8px rgba(40, 56, 74, 0.1);
+}
+.site-footer__link:hover {
+  color: var(--dusk);
+}

@@ -43,6 +43,7 @@ export default function AdminVenues() {
   const [venues, setVenues] = useState<VenueSummary[] | null>(null);
   const [err, setErr] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -57,6 +58,34 @@ export default function AdminVenues() {
       setErr(true);
     }
   }, []);
+
+  // Delete straight from the list — no need to open the wall first. Guarded by
+  // a typed-code prompt so a mis-click can't wipe a wall. Irreversible.
+  async function deleteVenue(v: VenueSummary) {
+    const typed = window.prompt(
+      `Permanently delete "${v.couple_display}"?\n\nThis removes the wall, all ${v.photos_total} photos, guests and codes — forever. Collected lead emails are kept.\n\nType the wall code ${v.code} to confirm:`,
+    );
+    if (typed == null) return; // cancelled
+    if (typed.trim().toUpperCase() !== v.code.toUpperCase()) {
+      window.alert("Code didn't match — nothing deleted.");
+      return;
+    }
+    setDeletingId(v.id);
+    try {
+      const res = await fetch(`/api/admin/venues/${encodeURIComponent(v.id)}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setVenues((prev) => (prev ? prev.filter((x) => x.id !== v.id) : prev));
+      } else {
+        window.alert("Couldn't delete the wall. Try again.");
+      }
+    } catch {
+      window.alert("Network error deleting the wall.");
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   useEffect(() => {
     void load();
@@ -102,14 +131,31 @@ export default function AdminVenues() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {venues.map((v) => (
-        <button
+        <div
           key={v.id}
-          type="button"
           className="appcard"
-          onClick={() => setOpenId(v.id)}
-          style={{ textAlign: "left", cursor: "pointer", width: "100%" }}
+          style={{ display: "flex", gap: 12, alignItems: "center" }}
         >
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => setOpenId(v.id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setOpenId(v.id);
+              }
+            }}
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              flex: 1,
+              minWidth: 0,
+              cursor: "pointer",
+              textAlign: "left",
+            }}
+          >
             <span
               style={{
                 width: 52,
@@ -137,7 +183,26 @@ export default function AdminVenues() {
             </div>
             <span style={{ color: "var(--dusk)" }}>→</span>
           </div>
-        </button>
+          <button
+            type="button"
+            onClick={() => void deleteVenue(v)}
+            disabled={deletingId === v.id}
+            title="Permanently delete this wall"
+            aria-label={`Delete ${v.couple_display}`}
+            style={{
+              flexShrink: 0,
+              padding: "6px 10px",
+              fontSize: 13,
+              borderRadius: 8,
+              border: "1px solid rgba(184,68,59,.4)",
+              background: "rgba(184,68,59,.06)",
+              color: "#b8443b",
+              cursor: "pointer",
+            }}
+          >
+            {deletingId === v.id ? "Deleting…" : "Delete"}
+          </button>
+        </div>
       ))}
     </div>
   );
@@ -148,12 +213,6 @@ function VenueDetailView({ id, onBack }: { id: string; onBack: () => void }) {
   const [err, setErr] = useState(false);
   const [busyPhoto, setBusyPhoto] = useState<string | null>(null);
   const [savingField, setSavingField] = useState(false);
-  // Delete flow: reveal a typed-confirmation box (admin must type the wall code)
-  // before the irreversible purge is armed.
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmText, setConfirmText] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [deleteErr, setDeleteErr] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -194,26 +253,6 @@ function VenueDetailView({ id, onBack }: { id: string; onBack: () => void }) {
       }
     } finally {
       setBusyPhoto(null);
-    }
-  }
-
-  async function deleteWall() {
-    if (!detail) return;
-    setDeleting(true);
-    setDeleteErr(false);
-    try {
-      const res = await fetch(`/api/admin/venues/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        onBack(); // returns to the list and reloads it (wall now gone)
-      } else {
-        setDeleteErr(true);
-      }
-    } catch {
-      setDeleteErr(true);
-    } finally {
-      setDeleting(false);
     }
   }
 
@@ -400,97 +439,6 @@ function VenueDetailView({ id, onBack }: { id: string; onBack: () => void }) {
               ))}
             </div>
           )}
-
-          {/* Danger zone — permanent wall deletion */}
-          <div className="section-label" style={{ marginTop: 24 }}>
-            Danger zone
-          </div>
-          <div
-            className="card"
-            style={{
-              padding: 16,
-              border: "1px solid rgba(184,68,59,.4)",
-              background: "rgba(184,68,59,.04)",
-            }}
-          >
-            <div style={{ fontWeight: 600, color: "#b8443b" }}>
-              Delete this wall
-            </div>
-            <p className="microcopy" style={{ margin: "6px 0 12px" }}>
-              Permanently removes the event, all {detail.photos.length} photos,
-              guests, and codes from the database and storage. Collected lead
-              emails are kept. This cannot be undone.
-            </p>
-            {!confirmOpen ? (
-              <button
-                type="button"
-                className="btn btn--secondary"
-                onClick={() => {
-                  setConfirmOpen(true);
-                  setConfirmText("");
-                  setDeleteErr(false);
-                }}
-                style={{ color: "#b8443b", borderColor: "rgba(184,68,59,.5)" }}
-              >
-                Delete wall…
-              </button>
-            ) : (
-              <div>
-                <label className="label" htmlFor="del-confirm">
-                  Type the wall code{" "}
-                  <strong>{detail.code}</strong> to confirm
-                </label>
-                <div className="field">
-                  <input
-                    id="del-confirm"
-                    value={confirmText}
-                    onChange={(e) => setConfirmText(e.target.value)}
-                    placeholder={detail.code}
-                    autoComplete="off"
-                    disabled={deleting}
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      border: 0,
-                      background: "transparent",
-                      font: "inherit",
-                    }}
-                  />
-                </div>
-                {deleteErr ? (
-                  <p
-                    className="microcopy"
-                    style={{ color: "#b8443b", marginTop: 8 }}
-                  >
-                    Couldn&apos;t delete the wall. Try again.
-                  </p>
-                ) : null}
-                <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                  <button
-                    type="button"
-                    className="btn btn--primary"
-                    onClick={() => void deleteWall()}
-                    disabled={
-                      deleting ||
-                      confirmText.trim().toUpperCase() !==
-                        detail.code.toUpperCase()
-                    }
-                    style={{ background: "#b8443b", borderColor: "#b8443b" }}
-                  >
-                    {deleting ? "Deleting…" : "Permanently delete"}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn"
-                    onClick={() => setConfirmOpen(false)}
-                    disabled={deleting}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
         </>
       )}
     </div>
