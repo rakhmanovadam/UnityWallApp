@@ -327,24 +327,66 @@ function LeadsByEvent() {
 
 // Invitation-only admin access: enter a team email, the server creates (or
 // promotes) the account with role=admin and emails a magic-link invite.
-type AdminUser = { email: string; created_at: string; is_you: boolean };
+type AdminUser = {
+  email: string;
+  created_at: string;
+  is_you: boolean;
+  is_super: boolean;
+};
 
 function InviteAdmin() {
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState<{ ok: boolean; msg: string } | null>(null);
   const [admins, setAdmins] = useState<AdminUser[] | null>(null);
+  // Whether the signed-in admin is one of the two owners — gates the remove
+  // buttons. Server re-checks on DELETE, so this is display-only.
+  const [viewerSuper, setViewerSuper] = useState(false);
+  const [removingEmail, setRemovingEmail] = useState<string | null>(null);
 
   const loadAdmins = useCallback(async () => {
     try {
       const res = await fetch("/api/admin/invites");
       if (!res.ok) return;
-      const data = (await res.json()) as { admins: AdminUser[] };
+      const data = (await res.json()) as {
+        admins: AdminUser[];
+        viewer_is_super: boolean;
+      };
       setAdmins(data.admins);
+      setViewerSuper(Boolean(data.viewer_is_super));
     } catch {
       // Non-fatal — the invite form still works without the roster.
     }
   }, []);
+
+  async function removeAdmin(target: AdminUser) {
+    if (
+      !window.confirm(
+        `Remove admin access for ${target.email}? They lose console access immediately.`,
+      )
+    ) {
+      return;
+    }
+    setRemovingEmail(target.email);
+    try {
+      const res = await fetch("/api/admin/invites", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: target.email }),
+      });
+      if (res.ok) {
+        setAdmins((prev) =>
+          prev ? prev.filter((a) => a.email !== target.email) : prev,
+        );
+      } else {
+        setNote({ ok: false, msg: `Couldn't remove ${target.email}.` });
+      }
+    } catch {
+      setNote({ ok: false, msg: "Network error removing admin." });
+    } finally {
+      setRemovingEmail(null);
+    }
+  }
 
   useEffect(() => {
     void loadAdmins();
@@ -405,10 +447,44 @@ function InviteAdmin() {
           <ul className="adminlist__rows" role="list">
             {admins.map((a) => (
               <li className="adminlist__row" key={a.email}>
-                <span className="adminlist__email">{a.email}</span>
-                {a.is_you ? (
-                  <span className="adminlist__tag">you</span>
-                ) : null}
+                <span className="adminlist__email">
+                  {a.is_super ? (
+                    <span
+                      title="Owner — primary admin, can't be removed"
+                      style={{ marginRight: 6 }}
+                      aria-label="Owner"
+                    >
+                      ★
+                    </span>
+                  ) : null}
+                  {a.email}
+                </span>
+                <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                  {a.is_super ? (
+                    <span className="adminlist__tag">owner</span>
+                  ) : null}
+                  {a.is_you ? (
+                    <span className="adminlist__tag">you</span>
+                  ) : null}
+                  {viewerSuper && !a.is_super ? (
+                    <button
+                      type="button"
+                      className="ulink"
+                      onClick={() => void removeAdmin(a)}
+                      disabled={removingEmail === a.email}
+                      style={{
+                        background: "none",
+                        border: 0,
+                        padding: 0,
+                        color: "#b8443b",
+                        cursor: "pointer",
+                        fontSize: 13,
+                      }}
+                    >
+                      {removingEmail === a.email ? "Removing…" : "Remove"}
+                    </button>
+                  ) : null}
+                </span>
               </li>
             ))}
           </ul>

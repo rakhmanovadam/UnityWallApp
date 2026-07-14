@@ -4,6 +4,7 @@ import { getAdminContext } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { adminInviteEmail, sendEmail } from "@/lib/email/resend";
 import { serverEnv } from "@/lib/env";
+import { isSuperAdmin } from "@/lib/admins";
 
 export const runtime = "nodejs";
 
@@ -26,7 +27,12 @@ export async function GET() {
   }
 
   const db = createAdminClient();
-  const admins: { email: string; created_at: string; is_you: boolean }[] = [];
+  const admins: {
+    email: string;
+    created_at: string;
+    is_you: boolean;
+    is_super: boolean;
+  }[] = [];
   for (let page = 1; page <= 20; page++) {
     const { data, error } = await db.auth.admin.listUsers({
       page,
@@ -40,13 +46,82 @@ export async function GET() {
           email: u.email,
           created_at: u.created_at ?? "",
           is_you: u.id === admin.userId,
+          is_super: isSuperAdmin(u.email),
         });
       }
     }
     if (data.users.length < 200) break;
   }
-  admins.sort((a, b) => a.email.localeCompare(b.email));
-  return NextResponse.json({ admins });
+  // Super-admins first, then alphabetical — the two owners pin to the top.
+  admins.sort((a, b) => {
+    if (a.is_super !== b.is_super) return a.is_super ? -1 : 1;
+    return a.email.localeCompare(b.email);
+  });
+  // viewer_is_super gates the delete controls client-side; the DELETE handler
+  // re-checks server-side so the flag is purely cosmetic.
+  return NextResponse.json({ admins, viewer_is_super: isSuperAdmin(admin.email) });
+}
+
+// Remove an admin's console access. Only the two super-admins may do this, and
+// super-admins themselves can't be removed through the UI. Strips the admin
+// role rather than deleting the auth user (they may also be a host).
+const DeleteBody = z.object({
+  email: z.string().email().max(320),
+});
+
+export async function DELETE(request: Request) {
+  const admin = await getAdminContext();
+  if (!admin) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  if (!isSuperAdmin(admin.email)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "invalid_json" }, { status: 400 });
+  }
+  const parsed = DeleteBody.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "invalid_body" }, { status: 400 });
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+
+  // The two owners are permanent — refuse to strip either, even from the other.
+  if (isSuperAdmin(email)) {
+    return NextResponse.json({ error: "cannot_remove_super" }, { status: 400 });
+  }
+
+  const db = createAdminClient();
+  const { data: existing } = await db.auth.admin.listUsers({ perPage: 200 });
+  const found = existing?.users.find((u) => u.email?.toLowerCase() === email);
+  if (!found) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  // Drop the role key entirely; keep any other app_metadata intact.
+  const meta = { ...(found.app_metadata as Record<string, unknown>) };
+  delete meta.role;
+  const { error: updateErr } = await db.auth.admin.updateUserById(found.id, {
+    app_metadata: { ...meta, role: null },
+  });
+  if (updateErr) {
+    return NextResponse.json({ error: "revoke_failed" }, { status: 500 });
+  }
+
+  await db.from("audit_log").insert({
+    actor_id: admin.userId,
+    actor_email: admin.email,
+    action: "admin.remove_admin",
+    target_table: "auth.users",
+    target_id: found.id,
+    meta: { email },
+  });
+
+  return NextResponse.json({ ok: true });
 }
 
 export async function POST(request: Request) {
