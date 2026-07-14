@@ -56,7 +56,13 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    // Surface the real cause in Vercel function logs — the silent catch made
+    // key/domain failures indistinguishable from DB errors. Response stays
+    // generic so the public endpoint leaks nothing.
+    console.error("otp/request failed", {
+      message: err instanceof Error ? err.message : String(err),
+    });
     return NextResponse.json({ error: "send_failed" }, { status: 500 });
   }
 }
