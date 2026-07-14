@@ -2399,3 +2399,36 @@ a { color: inherit; text-decoration: none; }
 .site-footer__link:hover {
   color: var(--dusk);
 }
+
+/* Clear, consistent back button (app/back-link.tsx). A visible pill so it
+   reads as a real control, not a faint text link. */
+.backlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--dusk);
+  background: var(--paper-2);
+  border: 1px solid var(--hair-3);
+  border-radius: 999px;
+  padding: 9px 16px 9px 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.05s ease;
+  margin-bottom: 14px;
+  -webkit-tap-highlight-color: transparent;
+}
+.backlink:hover {
+  background: var(--dusk-bg);
+  color: var(--dusk-d);
+}
+.backlink:active {
+  transform: translateY(1px);
+}
+.backlink__arrow {
+  font-size: 20px;
+  line-height: 0;
+  margin-top: -1px;
+}

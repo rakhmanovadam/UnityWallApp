@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import BackLink from "@/app/back-link";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — Unitywalls",
@@ -12,6 +13,7 @@ export const metadata: Metadata = {
 export default function PrivacyPage() {
   return (
     <section className="screen screen--scroll">
+      <BackLink href="/" label="Home" />
       <header className="apply__head">
         <span className="kicker kicker--dusk">Legal</span>
         <h1 className="display display--sm">Privacy Policy</h1>

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getLiveEventByCode } from "@/lib/db/events";
 import EmailForm from "./form";
+import BackLink from "@/app/back-link";
 
 type Params = Promise<{ code: string }>;
 
@@ -11,6 +12,7 @@ export default async function JoinEmailPage({ params }: { params: Params }) {
 
   return (
     <section className="screen screen--pad">
+      <BackLink href={`/join/${encodeURIComponent(event.code)}`} />
       <span className="kicker kicker--dusk">Sign the guestbook</span>
       <h1 className="display display--med">
         Leave your name

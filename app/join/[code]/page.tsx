@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLiveEventByCode } from "@/lib/db/events";
 import { renderCoupleDisplay } from "@/lib/render";
+import BackLink from "@/app/back-link";
 
 type Params = Promise<{ code: string }>;
 
@@ -12,6 +13,7 @@ export default async function JoinEventPage({ params }: { params: Params }) {
 
   return (
     <section className="screen screen--join">
+      <BackLink href="/" label="Home" />
       <div className="join__top">
         <span className="kicker kicker--mute">A shared wall</span>
         <span className="kicker kicker--dusk join__brand">

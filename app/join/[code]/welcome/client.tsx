@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import BackLink from "@/app/back-link";
 
 const PARTNERS: Array<{ src: string; alt: string; soon?: boolean }> = [
   { src: "/assets/partners/djq.png", alt: "DJQ" },
@@ -75,6 +76,7 @@ export default function WelcomeClient({
 
   return (
     <section className="screen screen--scroll">
+      <BackLink href={`/join/${encodeURIComponent(code)}`} />
       <header className="ob__bar">
         <div className="ob__brand">
           <span className="brandmark brandmark--xs" />

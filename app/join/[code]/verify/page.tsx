@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLiveEventByCode } from "@/lib/db/events";
 import VerifyForm from "./form";
+import BackLink from "@/app/back-link";
 
 type Params = Promise<{ code: string }>;
 
@@ -12,6 +13,7 @@ export default async function JoinVerifyPage({ params }: { params: Params }) {
 
   return (
     <section className="screen screen--pad screen--col">
+      <BackLink href={`/join/${encodeURIComponent(event.code)}/email`} />
       <div className="brand-tile" />
       <span className="kicker kicker--dusk" style={{ marginTop: 32 }}>
         Check your email

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
+import BackLink from "@/app/back-link";
 
 export default async function RequestSentPage() {
   const store = await cookies();
@@ -7,6 +8,7 @@ export default async function RequestSentPage() {
 
   return (
     <section className="screen screen--center">
+      <BackLink href="/" label="Home" />
       <div className="ring">
         <span />
       </div>

@@ -4,6 +4,7 @@ import { getHostContext } from "@/lib/host-session";
 import { qrSvg } from "@/lib/qr";
 import { serverEnv } from "@/lib/env";
 import { renderCoupleDisplay } from "@/lib/render";
+import BackLink from "@/app/back-link";
 
 export default async function CardPage() {
   const host = await getHostContext();
@@ -19,6 +20,7 @@ export default async function CardPage() {
 
   return (
     <section className="screen screen--center screen--card">
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="card-print">
         <span
           className="kicker kicker--dusk center"

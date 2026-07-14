@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getHostContext } from "@/lib/host-session";
 import ModerationClient from "./client";
+import BackLink from "@/app/back-link";
 
 export default async function ModerationPage() {
   const host = await getHostContext();
@@ -12,6 +13,7 @@ export default async function ModerationPage() {
 
   return (
     <section className="screen screen--scroll">
+      <BackLink href="/dashboard" label="Dashboard" />
       <div className="host__top">
         <span className="kicker kicker--dusk">Moderation queue</span>
         <h1 className="display display--med">Review before it lands</h1>

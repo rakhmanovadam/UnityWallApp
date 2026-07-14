@@ -7,6 +7,7 @@ import MasterEmails, {
   type FunnelCounts,
 } from "./master-emails";
 import AdminVenues from "./venues";
+import BackLink from "@/app/back-link";
 
 type Application = {
   id: string;
@@ -91,6 +92,7 @@ export default function AdminConsole({
 
   return (
     <section className="screen screen--scroll screen--admin">
+      <BackLink href="/" label="Home" />
       <div className="admin__top">
         <div>
           <span className="kicker kicker--dusk">Unitywalls · Admin</span>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import type { PhotoListItem } from "@/lib/db/photos";
+import BackLink from "@/app/back-link";
 
 type Layout = "mosaic" | "feature" | "grid";
 
@@ -138,6 +139,7 @@ export default function WallClient({
 
   return (
     <section className="screen screen--wall">
+      <BackLink href={`/join/${encodeURIComponent(code)}/upload`} />
       <header className="wall__head">
         <div>
           <span className="kicker kicker--dusk" id="wall-couple-kicker">

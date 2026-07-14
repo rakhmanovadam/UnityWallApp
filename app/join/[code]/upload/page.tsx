@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLiveEventByCode, signedCoverUrl } from "@/lib/db/events";
 import UploadForm from "./form";
+import BackLink from "@/app/back-link";
 
 type Params = Promise<{ code: string }>;
 
@@ -16,6 +17,7 @@ export default async function JoinUploadPage({ params }: { params: Params }) {
 
   return (
     <section className="screen screen--pad screen--col screen--scroll">
+      <BackLink href={`/join/${encodeURIComponent(event.code)}/welcome`} />
       {bannerUrl ? (
         <img
           className="upload__banner"

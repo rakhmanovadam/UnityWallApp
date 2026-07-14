@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
+import BackLink from "@/app/back-link";
 import { renderCoupleDisplay } from "@/lib/render";
 import {
   THEME_FONTS,
@@ -114,6 +115,7 @@ export default function HostDashboard({
 
   return (
     <section className="screen screen--scroll">
+      <BackLink href="/" label="Home" />
       <div className="host__top">
         <span className="kicker kicker--dusk">
           Your wall · {event.when_text}
