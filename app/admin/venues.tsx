@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type VenueSummary = {
   id: string;
@@ -44,6 +45,7 @@ export default function AdminVenues() {
   const [err, setErr] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     try {
@@ -77,6 +79,9 @@ export default function AdminVenues() {
       });
       if (res.ok) {
         setVenues((prev) => (prev ? prev.filter((x) => x.id !== v.id) : prev));
+        // Re-run the /admin server component so the control-room tiles
+        // (Venues count, conversion) reflect the deletion immediately.
+        router.refresh();
       } else {
         window.alert("Couldn't delete the wall. Try again.");
       }

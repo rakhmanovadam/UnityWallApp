@@ -57,7 +57,6 @@ export default async function AdminPage() {
       .select("email", { count: "exact", head: true });
 
   const [
-    { count: emails },
     { count: venues },
     { count: pending },
     { data: applications },
@@ -67,11 +66,9 @@ export default async function AdminPage() {
     { count: hotCount },
     { count: convertedCount },
   ] = await Promise.all([
-    db.from("guests").select("*", { count: "exact", head: true }),
-    db
-      .from("applications")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "approved"),
+    // Venues tile = actual walls (events). Counting events means deleting a
+    // wall decrements this the moment the console re-fetches (router.refresh).
+    db.from("events").select("*", { count: "exact", head: true }),
     db
       .from("applications")
       .select("*", { count: "exact", head: true })
@@ -97,7 +94,9 @@ export default async function AdminPage() {
     <AdminConsole
       email={ctx.email}
       metrics={{
-        emails: emails ?? 0,
+        // Emails tile = the collected-emails population, the same set the
+        // funnel + conversion are measured against (keeps convert% <= 100%).
+        emails: masterTotal ?? 0,
         venues: venues ?? 0,
         pending: pending ?? 0,
       }}

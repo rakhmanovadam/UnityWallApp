@@ -85,9 +85,16 @@ export default function AdminConsole({
     window.location.reload();
   }
 
+  // Conversion = collected emails that actually converted (bought), over all
+  // collected emails. Same population top and bottom, so it can never exceed
+  // 100%. Uses the funnel counts (emails.counts.converted / emails.total),
+  // which the master-emails table keeps in sync. The old formula divided
+  // approved-applications by guests — unrelated sets, hence the >100% readings.
   const convertPct =
-    metrics.emails > 0
-      ? ((metrics.venues / metrics.emails) * 100).toFixed(1) + "%"
+    emails.total > 0
+      ? Math.min(100, (emails.counts.converted / emails.total) * 100).toFixed(
+          1,
+        ) + "%"
       : "—";
 
   return (
