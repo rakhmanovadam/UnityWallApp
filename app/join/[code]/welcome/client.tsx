@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import BackLink from "@/app/back-link";
 
+// Adam's LinkedIn profile, linked from the guest welcome copy. Update this if
+// the profile URL changes.
+const ADAM_LINKEDIN_URL = "https://www.linkedin.com/in/adamrakhmanov/";
+
 const PARTNERS: Array<{ src: string; alt: string; soon?: boolean }> = [
   { src: "/assets/partners/djq.png", alt: "DJQ" },
   { src: "/assets/partners/copper-to-gold.png", alt: "Copper to Gold" },
@@ -94,9 +98,9 @@ export default function WelcomeClient({
         <div className="brand-tile brand-tile--sm" />
         <h1 className="display display--sm">Welcome to the wall</h1>
         <p className="ob__body">
-          We help businesses, non-profits, and creatives build their whole
-          digital presence — websites, maintenance, branding, and social media.
-          This gallery is one of our builds.
+          This is UnityWalls, an app crafted by UnityWall Technological
+          Solutions, LLC and Adam Rakhmanov. It&apos;s one of many projects
+          we&apos;ve brought to the world. Welcome, and enjoy.
         </p>
 
         <div className="ob__how">
@@ -123,9 +127,25 @@ export default function WelcomeClient({
           Start uploading photos <span className="arrow">→</span>
         </Link>
         <div className="ob__scroll">
-          Want to learn more about Unitywalls?
-          <br />
-          <span className="link-dusk">Scroll down ↓</span>
+          Want to learn more? Visit UnityWall at{" "}
+          <a
+            href="https://unitywall.co"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link-dusk"
+          >
+            unitywall.co
+          </a>
+          , and connect with{" "}
+          <a
+            href={ADAM_LINKEDIN_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="link-dusk"
+          >
+            Adam on LinkedIn
+          </a>
+          .
         </div>
       </article>
 
