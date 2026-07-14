@@ -10,7 +10,9 @@ export default async function HomePage() {
 
   return (
     <section className="screen screen--scroll">
-      {user?.email ? <SignOutRow email={user.email} /> : null}
+      {user?.email ? (
+        <SignOutRow email={user.email} showEmail={false} />
+      ) : null}
       <div className="home__top">
         <span className="brandmark brandmark--md home__mark" />
         <h1 className="display home__h">

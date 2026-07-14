@@ -6,9 +6,11 @@ import { createClient } from "@/lib/supabase/browser";
 export default function SignOutRow({
   email,
   align = "start",
+  showEmail = true,
 }: {
   email: string;
   align?: "start" | "center";
+  showEmail?: boolean;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const [busy, setBusy] = useState(false);
@@ -36,9 +38,11 @@ export default function SignOutRow({
       >
         {busy ? "Signing out…" : "Sign out"}
       </button>
-      <span className="microcopy" style={{ margin: 0 }}>
-        Signed in as <strong>{email}</strong>
-      </span>
+      {showEmail ? (
+        <span className="microcopy" style={{ margin: 0 }}>
+          Signed in as <strong>{email}</strong>
+        </span>
+      ) : null}
     </div>
   );
 }
