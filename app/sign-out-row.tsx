@@ -3,7 +3,13 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 
-export default function SignOutRow({ email }: { email: string }) {
+export default function SignOutRow({
+  email,
+  align = "start",
+}: {
+  email: string;
+  align?: "start" | "center";
+}) {
   const supabase = useMemo(() => createClient(), []);
   const [busy, setBusy] = useState(false);
 
@@ -12,7 +18,8 @@ export default function SignOutRow({ email }: { email: string }) {
       style={{
         display: "flex",
         alignItems: "center",
-        justifyContent: "flex-start",
+        flexWrap: "wrap",
+        justifyContent: align === "center" ? "center" : "flex-start",
         gap: 10,
         padding: "14px 20px 0",
       }}

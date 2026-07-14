@@ -49,6 +49,12 @@ export default async function HomePage() {
         <span className="home-tile__arrow">→</span>
       </Link>
 
+      {user?.email ? (
+        <div style={{ marginTop: 8, textAlign: "center" }}>
+          <SignOutRow email={user.email} align="center" />
+        </div>
+      ) : null}
+
       <div className="home__foot">
         <span className="brandmark brandmark--xs" />
         <span>Powered by Unitywalls · support@unitywall.co</span>
