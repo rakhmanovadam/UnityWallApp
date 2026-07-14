@@ -428,7 +428,7 @@ export default function UploadForm({ code }: { code: string }) {
         Notification.permission === "granted"
       ) {
         try {
-          new Notification("UnityWall", {
+          new Notification("Unitywalls", {
             body:
               errored > 0
                 ? `${done} photo${done === 1 ? "" : "s"} on the wall · ${errored} need a retry`

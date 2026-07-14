@@ -1,0 +1,330 @@
+[
+  {
+    "id": "STA-01",
+    "area": "static",
+    "name": "Home — 3 doors",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-01-home.png"
+  },
+  {
+    "id": "STA-02",
+    "area": "static",
+    "name": "Join code page",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-02-join.png"
+  },
+  {
+    "id": "STA-03",
+    "area": "static",
+    "name": "Venue application form",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-03-request.png"
+  },
+  {
+    "id": "STA-04",
+    "area": "static",
+    "name": "Privacy page",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-04-privacy.png"
+  },
+  {
+    "id": "STA-05",
+    "area": "static",
+    "name": "Terms page",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-05-terms.png"
+  },
+  {
+    "id": "STA-06",
+    "area": "static",
+    "name": "Application-sent page",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-06-request-sent.png"
+  },
+  {
+    "id": "STA-07",
+    "area": "static",
+    "name": "Unknown join code -> 404",
+    "status": "PASS",
+    "detail": "",
+    "shot": "sta-07-404.png"
+  },
+  {
+    "id": "MKT-01",
+    "area": "marketing",
+    "name": "Venue application persists",
+    "status": "PASS",
+    "detail": "http=200 row=1339f6c6-4f5a-4f2f-8c54-cb68342f7612 status=pending_review",
+    "shot": ""
+  },
+  {
+    "id": "MKT-02",
+    "area": "marketing",
+    "name": "Lead capture (hot)",
+    "status": "PASS",
+    "detail": "http=200",
+    "shot": ""
+  },
+  {
+    "id": "GST-01",
+    "area": "guest",
+    "name": "OTP verify -> guest cookie + verified_at + opt-in",
+    "status": "PASS",
+    "detail": "http=200 cookie=true verified=true optin=true",
+    "shot": ""
+  },
+  {
+    "id": "GST-02",
+    "area": "guest",
+    "name": "Upload 3 photos (init+PUT+finalize+sharp)",
+    "status": "PASS",
+    "detail": "finalized=3/3 rows=3 status=approved",
+    "shot": ""
+  },
+  {
+    "id": "GST-03",
+    "area": "guest",
+    "name": "Wall SSR renders approved photos",
+    "status": "PASS",
+    "detail": "3 imgs",
+    "shot": "gst-03-wall.png"
+  },
+  {
+    "id": "GST-04",
+    "area": "guest",
+    "name": "Guest self-delete own photo",
+    "status": "PASS",
+    "detail": "http=200 3->2",
+    "shot": ""
+  },
+  {
+    "id": "GST-05",
+    "area": "guest",
+    "name": "Foreign guest cannot delete (404)",
+    "status": "PASS",
+    "detail": "http=404",
+    "shot": ""
+  },
+  {
+    "id": "MOD-01",
+    "area": "moderation",
+    "name": "Moderated wall upload -> pending",
+    "status": "PASS",
+    "detail": "2 rows status=pending",
+    "shot": ""
+  },
+  {
+    "id": "MOD-02",
+    "area": "moderation",
+    "name": "Pending hidden from public wall",
+    "status": "PASS",
+    "detail": "0 imgs",
+    "shot": "mod-02-wall-pending-empty.png"
+  },
+  {
+    "id": "HOST-01",
+    "area": "host",
+    "name": "Magic-link login -> dashboard (SSR)",
+    "status": "PASS",
+    "detail": "",
+    "shot": "host-01-dashboard.png"
+  },
+  {
+    "id": "HOST-02",
+    "area": "host",
+    "name": "Shareable QR card (SSR)",
+    "status": "PASS",
+    "detail": "",
+    "shot": "host-02-card.png"
+  },
+  {
+    "id": "HOST-03",
+    "area": "host",
+    "name": "Projector slideshow (SSR)",
+    "status": "PASS",
+    "detail": "",
+    "shot": "host-03-slideshow.png"
+  },
+  {
+    "id": "HOST-04",
+    "area": "host",
+    "name": "Moderation queue + approve",
+    "status": "PASS",
+    "detail": "queue=2 approved=2",
+    "shot": ""
+  },
+  {
+    "id": "HOST-05",
+    "area": "host",
+    "name": "Approved photos now on wall",
+    "status": "PASS",
+    "detail": "2 imgs",
+    "shot": "host-05-wall-approved.png"
+  },
+  {
+    "id": "HOST-06",
+    "area": "host",
+    "name": "Cover banner upload",
+    "status": "PASS",
+    "detail": "path=4bfdf76f-6a1a-4817-8d59-ab7970d67cba/9bdc66af-822a-42e7-afbd-38a913cc2093.jpg",
+    "shot": "host-06-cover.png"
+  },
+  {
+    "id": "HOST-07",
+    "area": "host",
+    "name": "Edit wall details (welcome msg)",
+    "status": "PASS",
+    "detail": "msg=Edited by automated test - welcome!",
+    "shot": ""
+  },
+  {
+    "id": "HOST-08",
+    "area": "host",
+    "name": "Reject cover path outside event prefix",
+    "status": "PASS",
+    "detail": "http=400",
+    "shot": ""
+  },
+  {
+    "id": "HOST-09",
+    "area": "host",
+    "name": "Closed upload window blocks guest (409)",
+    "status": "PASS",
+    "detail": "status=409 err=uploads_closed",
+    "shot": ""
+  },
+  {
+    "id": "HOST-10",
+    "area": "host",
+    "name": "Download-all ZIP stream",
+    "status": "PASS",
+    "detail": "http=200 ct=application/zip bytes=61502",
+    "shot": ""
+  },
+  {
+    "id": "ADM-01",
+    "area": "admin",
+    "name": "Admin magic-link -> console (SSR)",
+    "status": "PASS",
+    "detail": "",
+    "shot": "adm-01-console.png"
+  },
+  {
+    "id": "ADM-02",
+    "area": "admin",
+    "name": "Approve application (provisions host+event)",
+    "status": "PASS",
+    "detail": "http=200 status=approved",
+    "shot": ""
+  },
+  {
+    "id": "ADM-03",
+    "area": "admin",
+    "name": "Decline application w/ reason",
+    "status": "PASS",
+    "detail": "status=declined reason=Automated test decline reason.",
+    "shot": ""
+  },
+  {
+    "id": "ADM-04",
+    "area": "admin",
+    "name": "Invite admin grants role",
+    "status": "PASS",
+    "detail": "http=502 role=admin",
+    "shot": ""
+  },
+  {
+    "id": "ADM-05",
+    "area": "admin",
+    "name": "Admin roster lists admins",
+    "status": "PASS",
+    "detail": "http=200 admins=10",
+    "shot": ""
+  },
+  {
+    "id": "ADM-06",
+    "area": "admin",
+    "name": "Leads API (admin-gated)",
+    "status": "PASS",
+    "detail": "http=200",
+    "shot": ""
+  },
+  {
+    "id": "ADM-07",
+    "area": "admin",
+    "name": "Master emails API (admin-gated)",
+    "status": "PASS",
+    "detail": "http=200",
+    "shot": ""
+  },
+  {
+    "id": "EDGE-01",
+    "area": "edge",
+    "name": "max_uploads_per_guest enforced (limit 2)",
+    "status": "PASS",
+    "detail": "r1=true r2=true r3=409/upload_limit_reached rows=2",
+    "shot": ""
+  },
+  {
+    "id": "EDGE-02",
+    "area": "edge",
+    "name": "OTP wrong code locks after 5 (401->429)",
+    "status": "PASS",
+    "detail": "final=429",
+    "shot": ""
+  },
+  {
+    "id": "EDGE-03",
+    "area": "edge",
+    "name": "Expired OTP -> 410",
+    "status": "PASS",
+    "detail": "http=410",
+    "shot": ""
+  },
+  {
+    "id": "EDGE-04",
+    "area": "edge",
+    "name": "Draft event not joinable (404)",
+    "status": "PASS",
+    "detail": "",
+    "shot": "edge-04-draft-404.png"
+  },
+  {
+    "id": "RET-01",
+    "area": "retention",
+    "name": "Cron: 14d reminder tier stamped",
+    "status": "PASS",
+    "detail": "14d=2026-07-11T18:28:47.717+00:00",
+    "shot": ""
+  },
+  {
+    "id": "RET-02",
+    "area": "retention",
+    "name": "Cron: 3d reminder tier stamped",
+    "status": "PASS",
+    "detail": "3d=2026-07-11T18:28:47.717+00:00",
+    "shot": ""
+  },
+  {
+    "id": "RET-03",
+    "area": "retention",
+    "name": "Cron: past-due wall purged (archived + photos gone)",
+    "status": "PASS",
+    "detail": "status=archived purged=2026-07-11T18:28:47.717+00:00 photos=0",
+    "shot": ""
+  },
+  {
+    "id": "RET-04",
+    "area": "retention",
+    "name": "Cron idempotent (14d stamp unchanged on rerun)",
+    "status": "PASS",
+    "detail": "http2=200",
+    "shot": ""
+  }
+]

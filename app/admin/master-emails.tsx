@@ -129,7 +129,7 @@ export default function MasterEmails({
   const setType = resetPageAnd(setPersonType);
   const setConv = resetPageAnd(setConverted);
 
-  // Manual "actually bought from UnityWall" toggle. Optimistic: the checkbox
+  // Manual "actually bought from Unitywalls" toggle. Optimistic: the checkbox
   // and the Converted counter flip immediately and revert if the PATCH fails.
   async function toggleConverted(row: MasterRow) {
     const next = !row.converted;
@@ -385,8 +385,8 @@ export default function MasterEmails({
                       onChange={() => void toggleConverted(row)}
                       title={
                         row.converted
-                          ? `Bought from UnityWall${row.converted_at ? ` · ${fmtDate(row.converted_at)}` : ""}`
-                          : "Mark as bought from UnityWall"
+                          ? `Bought from Unitywalls${row.converted_at ? ` · ${fmtDate(row.converted_at)}` : ""}`
+                          : "Mark as bought from Unitywalls"
                       }
                       aria-label={`Mark ${row.email} as converted`}
                       style={{ width: 16, height: 16, cursor: "pointer" }}

@@ -78,7 +78,7 @@ export default function WelcomeClient({
       <header className="ob__bar">
         <div className="ob__brand">
           <span className="brandmark brandmark--xs" />
-          <span className="kicker kicker--mute">Powered by UnityWall</span>
+          <span className="kicker kicker--mute">Powered by Unitywalls</span>
         </div>
         <Link
           href={`/join/${encodeURIComponent(code)}/upload`}
@@ -121,7 +121,7 @@ export default function WelcomeClient({
           Start uploading photos <span className="arrow">→</span>
         </Link>
         <div className="ob__scroll">
-          Want to learn more about UnityWall?
+          Want to learn more about Unitywalls?
           <br />
           <span className="link-dusk">Scroll down ↓</span>
         </div>
@@ -134,7 +134,7 @@ export default function WelcomeClient({
           aboutRef.current = el;
         }}
       >
-        <span className="kicker kicker--dusk">About UnityWall</span>
+        <span className="kicker kicker--dusk">About Unitywalls</span>
         <h2 className="title">More than just websites</h2>
         <p className="ob__body">
           We build and maintain the full digital presence for the people who

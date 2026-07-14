@@ -121,7 +121,7 @@ export async function GET(request: Request) {
 }
 
 // Manual conversion checkbox. "Converted" strictly means "bought from
-// UnityWall" — nothing sets it automatically anymore (venue approval only
+// Unitywalls" — nothing sets it automatically anymore (venue approval only
 // tags person_type), so this PATCH is the single write path.
 const PatchBody = z.object({
   email: z.string().email().max(320),

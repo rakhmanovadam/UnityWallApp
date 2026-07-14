@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — UnityWall",
-  description: "The terms that govern hosting and using UnityWall.",
+  title: "Terms of Service — Unitywalls",
+  description: "The terms that govern hosting and using Unitywalls.",
 };
 
 // Plain-language hosting terms. Kept as a static server component so both the
@@ -20,9 +20,9 @@ export default function TermsPage() {
       <div className="legal" style={{ maxWidth: 640, margin: "0 auto", lineHeight: 1.6 }}>
         <p className="microcopy">Last updated: July 9, 2026</p>
 
-        <h2>1. What UnityWall is</h2>
+        <h2>1. What Unitywalls is</h2>
         <p>
-          UnityWall provides a QR-based shared photo wall for weddings and
+          Unitywalls provides a QR-based shared photo wall for weddings and
           events. A host publishes a wall; guests scan a code, verify an email,
           and upload photos that appear on the live wall. These terms govern
           both hosting a wall and using one as a guest.
@@ -33,7 +33,7 @@ export default function TermsPage() {
           Hosts apply for access and are approved individually. As a host you
           are responsible for the event you run, for moderating the content that
           appears on your wall, and for having the right to invite your guests
-          to participate. You agree not to use UnityWall for any unlawful
+          to participate. You agree not to use Unitywalls for any unlawful
           purpose or to solicit content that is illegal, harassing, or infringes
           someone else&apos;s rights.
         </p>
@@ -41,7 +41,7 @@ export default function TermsPage() {
         <h2>3. Guest content</h2>
         <p>
           Guests retain ownership of the photos they upload. By uploading, a
-          guest grants the event host and UnityWall a limited license to store,
+          guest grants the event host and Unitywalls a limited license to store,
           process, display, and let the host download those photos for the
           purpose of running and delivering the event wall. Hosts and moderators
           may remove any photo at any time.
@@ -70,7 +70,7 @@ export default function TermsPage() {
 
         <h2>6. Availability and liability</h2>
         <p>
-          UnityWall is provided &quot;as is.&quot; We work to keep the service
+          Unitywalls is provided &quot;as is.&quot; We work to keep the service
           available and your photos safe, but we do not guarantee uninterrupted
           service and are not liable for indirect or consequential losses to the
           extent permitted by law. Keep your own copy of anything you can&apos;t

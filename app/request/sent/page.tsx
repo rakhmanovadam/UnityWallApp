@@ -32,7 +32,7 @@ export default async function RequestSentPage() {
       </Link>
       <div className="powered powered--sub">
         <span className="brandmark brandmark--xs" />
-        <span>UnityWall</span>
+        <span>Unitywalls</span>
       </div>
     </section>
   );

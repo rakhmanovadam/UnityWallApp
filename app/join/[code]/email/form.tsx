@@ -82,7 +82,7 @@ export default function EmailForm({ code }: { code: string }) {
         />
         <span className="optin__box" aria-hidden="true" />
         <span className="optin__text">
-          Keep me posted with UnityWall stories and updates.
+          Keep me posted with Unitywalls stories and updates.
         </span>
       </label>
       <p className="microcopy">

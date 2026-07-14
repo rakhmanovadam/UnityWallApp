@@ -14,7 +14,7 @@ export default async function AdminPage() {
     if (auth.user) {
       return (
         <section className="screen screen--pad screen--col">
-          <span className="kicker kicker--dusk">UnityWall · Admin</span>
+          <span className="kicker kicker--dusk">Unitywalls · Admin</span>
           <h1 className="display display--med">Not authorized</h1>
           <p className="lede">
             Signed in as {auth.user.email}, but this account doesn&apos;t have
@@ -26,7 +26,7 @@ export default async function AdminPage() {
 
     return (
       <section className="screen screen--pad screen--col">
-        <span className="kicker kicker--dusk">UnityWall · Admin</span>
+        <span className="kicker kicker--dusk">Unitywalls · Admin</span>
         <h1 className="display display--med">Staff sign-in</h1>
         <p className="lede">
           Magic-link sign-in with role check. This page is never linked

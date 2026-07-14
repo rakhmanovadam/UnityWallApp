@@ -59,7 +59,7 @@ export function leadNotificationEmail(opts: {
         .join("")
     : "";
   return {
-    subject: `UnityWall lead · ${opts.source}`,
+    subject: `Unitywalls lead · ${opts.source}`,
     text: `New ${opts.source} lead
 Email: ${opts.email ?? "—"}
 Name: ${opts.name ?? "—"}
@@ -95,7 +95,7 @@ export function applicationNotificationEmail(opts: {
   notes?: string | null;
 }) {
   return {
-    subject: `UnityWall application · ${opts.venue}`,
+    subject: `Unitywalls application · ${opts.venue}`,
     text: `New application
 Venue: ${opts.venue}
 Contact: ${opts.contact}
@@ -130,14 +130,14 @@ export function hostInviteEmail(opts: {
   magicLink: string;
 }) {
   return {
-    subject: "You're approved — welcome to UnityWall",
-    text: `Welcome aboard, ${opts.venue}.\n\nYour UnityWall dashboard is ready. Tap the link below to sign in. We never use passwords here — just one-tap magic links.\n\n${opts.magicLink}\n\nIf you need anything, reply to this email.\n\n— UnityWall`,
+    subject: "You're approved — welcome to Unitywalls",
+    text: `Welcome aboard, ${opts.venue}.\n\nYour Unitywalls dashboard is ready. Tap the link below to sign in. We never use passwords here — just one-tap magic links.\n\n${opts.magicLink}\n\nIf you need anything, reply to this email.\n\n— Unitywalls`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
     <tr><td>
       <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">You're approved</div>
-      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Welcome to UnityWall, ${escape(opts.venue)}</h1>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Welcome to Unitywalls, ${escape(opts.venue)}</h1>
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;">Your dashboard is ready. Tap the button below to sign in. No password — magic link only.</p>
       <p style="margin:24px 0;text-align:center;">
         <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Open my dashboard</a>
@@ -155,17 +155,17 @@ export function hostInviteEmail(opts: {
 export function signInEmail(opts: { magicLink: string; audience: "admin" | "host" }) {
   const where = opts.audience === "admin" ? "admin console" : "dashboard";
   return {
-    subject: "Your UnityWall sign-in link",
-    text: `Tap the link below to sign in to your UnityWall ${where}. No password — magic link only. It expires in 1 hour.\n\n${opts.magicLink}\n\nIf you didn't request this, ignore this email.\n\n— UnityWall`,
+    subject: "Your Unitywalls sign-in link",
+    text: `Tap the link below to sign in to your Unitywalls ${where}. No password — magic link only. It expires in 1 hour.\n\n${opts.magicLink}\n\nIf you didn't request this, ignore this email.\n\n— Unitywalls`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
     <tr><td>
       <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">Sign in</div>
-      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Your UnityWall sign-in link</h1>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Your Unitywalls sign-in link</h1>
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;">Tap the button below to sign in to your ${where}. No password — magic link only.</p>
       <p style="margin:24px 0;text-align:center;">
-        <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Sign in to UnityWall</a>
+        <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Sign in to Unitywalls</a>
       </p>
       <p style="font-size:12px;color:#888;margin:24px 0 0;">Link expires in 1 hour. If you didn't request this, ignore this email.</p>
     </td></tr>
@@ -182,15 +182,15 @@ export function adminInviteEmail(opts: {
   invitedBy: string;
 }) {
   return {
-    subject: "You've been invited to the UnityWall admin console",
-    text: `${opts.invitedBy} invited you to the UnityWall admin console.\n\nTap the link below to sign in. No password — magic link only. It expires in 1 hour; after that, request a fresh link from the admin sign-in page.\n\n${opts.magicLink}\n\nIf you weren't expecting this, ignore this email.\n\n— UnityWall`,
+    subject: "You've been invited to the Unitywalls admin console",
+    text: `${opts.invitedBy} invited you to the Unitywalls admin console.\n\nTap the link below to sign in. No password — magic link only. It expires in 1 hour; after that, request a fresh link from the admin sign-in page.\n\n${opts.magicLink}\n\nIf you weren't expecting this, ignore this email.\n\n— Unitywalls`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
     <tr><td>
       <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">Admin invitation</div>
       <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">You're invited to the admin console</h1>
-      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;"><strong>${escape(opts.invitedBy)}</strong> added you to the UnityWall admin team. Tap the button below to sign in. No password — magic link only.</p>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 18px;"><strong>${escape(opts.invitedBy)}</strong> added you to the Unitywalls admin team. Tap the button below to sign in. No password — magic link only.</p>
       <p style="margin:24px 0;text-align:center;">
         <a href="${escape(opts.magicLink)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Open the admin console</a>
       </p>
@@ -216,18 +216,18 @@ export function applicationDeclineEmail(opts: {
     ? `\n\nA note from the reviewer:\n${opts.reason}\n`
     : "";
   return {
-    subject: "About your UnityWall application",
-    text: `Hi ${firstName},\n\nThanks for taking the time to apply with ${opts.venue}. After a careful look we aren't able to move ${opts.venue} forward as a UnityWall host at this time.${reasonText}\n\nYou're welcome to reapply once anything changes — reply to this email if you'd like to talk it through.\n\n— UnityWall · support@unitywall.co`,
+    subject: "About your Unitywalls application",
+    text: `Hi ${firstName},\n\nThanks for taking the time to apply with ${opts.venue}. After a careful look we aren't able to move ${opts.venue} forward as a Unitywalls host at this time.${reasonText}\n\nYou're welcome to reapply once anything changes — reply to this email if you'd like to talk it through.\n\n— Unitywalls · support@unitywall.co`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
     <tr><td>
       <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#7a6f5e;">Application update</div>
       <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">Thanks for applying, ${escape(firstName)}</h1>
-      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">We aren't able to move <strong>${escape(opts.venue)}</strong> forward as a UnityWall host at this time.</p>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">We aren't able to move <strong>${escape(opts.venue)}</strong> forward as a Unitywalls host at this time.</p>
       ${reasonBlock}
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">You're welcome to reapply once anything changes — hit reply if you'd like to talk it through.</p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— UnityWall · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
@@ -236,8 +236,8 @@ export function applicationDeclineEmail(opts: {
 
 export function applicationAckEmail(opts: { venue: string }) {
   return {
-    subject: "We received your UnityWall application",
-    text: `Hi — thanks for applying with ${opts.venue}.\n\nWe read every application by hand, usually within a day. We'll email you the moment you're approved with your dashboard and QR.\n\n— UnityWall`,
+    subject: "We received your Unitywalls application",
+    text: `Hi — thanks for applying with ${opts.venue}.\n\nWe read every application by hand, usually within a day. We'll email you the moment you're approved with your dashboard and QR.\n\n— Unitywalls`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
@@ -245,7 +245,7 @@ export function applicationAckEmail(opts: { venue: string }) {
       <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:0 0 16px;">We received your application</h1>
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">Thanks for applying with <strong>${escape(opts.venue)}</strong>. We read every one by hand, usually within a day.</p>
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">We'll email you the moment you're approved, with your dashboard and a QR for your tables.</p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— UnityWall · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
@@ -263,9 +263,9 @@ export function downloadReminderEmail(opts: {
   const urgent = opts.daysLeft <= 3;
   return {
     subject: urgent
-      ? `Last chance — your UnityWall closes in ${opts.daysLeft} days`
-      : `Your UnityWall closes in ${opts.daysLeft} days`,
-    text: `Hi ${opts.venue},\n\nYour UnityWall closes on ${opts.deleteOn} (${opts.daysLeft} days from now). When it closes the wall goes offline and every photo is permanently deleted. Download the full-resolution archive from your dashboard before then — once purged we can't recover them.\n\n${opts.dashboardUrl}\n\n— UnityWall · support@unitywall.co`,
+      ? `Last chance — your Unitywalls closes in ${opts.daysLeft} days`
+      : `Your Unitywalls closes in ${opts.daysLeft} days`,
+    text: `Hi ${opts.venue},\n\nYour Unitywalls closes on ${opts.deleteOn} (${opts.daysLeft} days from now). When it closes the wall goes offline and every photo is permanently deleted. Download the full-resolution archive from your dashboard before then — once purged we can't recover them.\n\n${opts.dashboardUrl}\n\n— Unitywalls · support@unitywall.co`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
@@ -276,7 +276,7 @@ export function downloadReminderEmail(opts: {
       <p style="margin:24px 0;text-align:center;">
         <a href="${escape(opts.dashboardUrl)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Download my photos</a>
       </p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— UnityWall · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
@@ -295,18 +295,18 @@ function escape(s: string) {
 // host-invite templates.
 export function otpEmail(code: string) {
   return {
-    subject: "Your UnityWall code",
-    text: `Your UnityWall code: ${code}\n\nThis code expires in 10 minutes. If you didn't request it, ignore this email.`,
+    subject: "Your Unitywalls code",
+    text: `Your Unitywalls code: ${code}\n\nThis code expires in 10 minutes. If you didn't request it, ignore this email.`,
     html: `
 <!doctype html>
 <html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table cellpadding="0" cellspacing="0" border="0" style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
     <tr><td>
-      <h1 style="font-family:'Playfair Display',Georgia,serif;font-weight:600;font-size:22px;margin:0 0 16px;color:#222;">Your UnityWall code</h1>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-weight:600;font-size:22px;margin:0 0 16px;color:#222;">Your Unitywalls code</h1>
       <p style="font-size:15px;line-height:1.5;color:#444;margin:0 0 18px;">Tap or type this six-digit code on the wall to confirm your email:</p>
       <div style="font-size:32px;letter-spacing:0.4em;text-align:center;font-weight:600;color:#222;padding:18px 0;background:#FAF7F2;border-radius:10px;">${code}</div>
       <p style="font-size:13px;color:#666;margin:24px 0 0;">This code expires in 10 minutes. If you didn't request it, ignore this email.</p>
-      <p style="font-size:12px;color:#888;margin:24px 0 0;text-align:center;">— UnityWall</p>
+      <p style="font-size:12px;color:#888;margin:24px 0 0;text-align:center;">— Unitywalls</p>
     </td></tr>
   </table>
 </body></html>`.trim(),

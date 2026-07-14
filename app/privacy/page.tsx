@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — UnityWall",
-  description: "How UnityWall collects, uses, and deletes your data.",
+  title: "Privacy Policy — Unitywalls",
+  description: "How Unitywalls collects, uses, and deletes your data.",
 };
 
 // Static server component — reachable from the guest email step and the venue
@@ -63,7 +63,7 @@ export default function PrivacyPage() {
 
         <h2>6. Sharing with third parties</h2>
         <p>
-          We rely on infrastructure providers to run UnityWall — hosting and
+          We rely on infrastructure providers to run Unitywalls — hosting and
           database (Supabase), transactional email (Resend), and our deployment
           platform (Vercel). They process data on our behalf under their own
           security commitments. We do not share your data with advertisers.

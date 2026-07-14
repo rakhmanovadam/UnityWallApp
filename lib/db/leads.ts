@@ -136,7 +136,7 @@ export async function upsertLead(opts: {
 
 // Tags a lead as a venue host when their application is approved. Deliberately
 // does NOT touch converted — "converted" means "actually bought from
-// UnityWall" and is flipped by hand in the admin console (setLeadConverted).
+// Unitywalls" and is flipped by hand in the admin console (setLeadConverted).
 // If no lead row exists yet, one is inserted so the master-email view still
 // carries the venue_host type.
 export async function markLeadVenueHost(email: string): Promise<void> {

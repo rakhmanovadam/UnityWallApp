@@ -48,7 +48,7 @@ export default async function CardPage() {
         </div>
         <div className="powered powered--card">
           <span className="brandmark brandmark--xs" />
-          <span>Powered by UnityWall</span>
+          <span>Powered by Unitywalls</span>
         </div>
       </div>
       <Link className="microcopy" href="/dashboard" style={{ marginTop: 24 }}>

@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminContext } from "@/lib/admin-session";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getAdminVenueDetail } from "@/lib/db/admin-venues";
+import {
+  getAdminVenueDetail,
+  deleteVenueCompletely,
+} from "@/lib/db/admin-venues";
 
 export const runtime = "nodejs";
 
@@ -102,6 +105,46 @@ export async function PATCH(
     target_table: "events",
     target_id: parsedParams.data.id,
     meta: parsed.data,
+  });
+
+  return NextResponse.json({ ok: true });
+}
+
+// Permanently delete a wall — the event row plus its photos, guests, OTP codes
+// (DB cascade) and storage objects. Leads keep their data with event_id nulled.
+// Irreversible; admin-only.
+export async function DELETE(
+  _request: Request,
+  ctx: { params: Promise<{ id: string }> },
+) {
+  const adminCtx = await getAdminContext();
+  if (!adminCtx) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const parsedParams = ParamsSchema.safeParse(await ctx.params);
+  if (!parsedParams.success) {
+    return NextResponse.json({ error: "invalid_event" }, { status: 400 });
+  }
+
+  // Capture identifying detail for the audit trail before the row is gone.
+  const detail = await getAdminVenueDetail(parsedParams.data.id);
+  if (!detail) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+
+  const ok = await deleteVenueCompletely(parsedParams.data.id);
+  if (!ok) {
+    return NextResponse.json({ error: "delete_failed" }, { status: 500 });
+  }
+
+  const db = createAdminClient();
+  await db.from("audit_log").insert({
+    actor_id: adminCtx.userId,
+    actor_email: adminCtx.email,
+    action: "admin.delete_event",
+    target_table: "events",
+    target_id: parsedParams.data.id,
+    meta: { code: detail.code, couple_display: detail.couple_display },
   });
 
   return NextResponse.json({ ok: true });

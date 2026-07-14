@@ -102,7 +102,7 @@ export default function SlideshowClient({
         <div className="slide__shade" />
         <div className="slide__brand">
           <span className="brandmark brandmark--xs" />
-          <span>UnityWall</span>
+          <span>Unitywalls</span>
         </div>
         <div className="slide__title">
           <div className="kicker kicker--dusk">{whenText}</div>

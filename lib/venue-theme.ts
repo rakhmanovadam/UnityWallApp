@@ -27,7 +27,7 @@ export const THEME_FONTS: Record<
   ThemeFontKey,
   { label: string; stack: string | null }
 > = {
-  default: { label: "UnityWall default", stack: null },
+  default: { label: "Unitywalls default", stack: null },
   classic: { label: "Classic serif", stack: "'Playfair Display', Georgia, serif" },
   modern: {
     label: "Modern sans",

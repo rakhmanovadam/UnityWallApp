@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "UnityWall — A living wall, assembled by everyone in the room",
+  title: "Unitywalls — A living wall, assembled by everyone in the room",
   description:
     "A shared photo wall for weddings and events. Scan a QR, drop a photo, watch the wall fill in.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "UnityWall",
+    title: "Unitywalls",
     statusBarStyle: "default",
   },
   icons: {

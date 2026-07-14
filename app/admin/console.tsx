@@ -93,7 +93,7 @@ export default function AdminConsole({
     <section className="screen screen--scroll screen--admin">
       <div className="admin__top">
         <div>
-          <span className="kicker kicker--dusk">UnityWall · Admin</span>
+          <span className="kicker kicker--dusk">Unitywalls · Admin</span>
           <div className="wall__title">Control room</div>
         </div>
         <span className="brandmark brandmark--sm" />

@@ -164,6 +164,68 @@ export async function getAdminVenueDetail(
   return { ...e, photos } as AdminVenueDetail;
 }
 
+// Permanently delete a wall and everything under it. Deleting the events row
+// cascades to guests / photos / otp_codes (ON DELETE CASCADE) and nulls the
+// event_id on leads (ON DELETE SET NULL — collected emails are preserved).
+// Storage objects live outside Postgres, so we remove those buckets first
+// before dropping the row. Irreversible.
+export async function deleteVenueCompletely(eventId: string): Promise<boolean> {
+  const admin = createAdminClient();
+
+  // Pull every photo's storage paths (all statuses, no cap — we're deleting).
+  const { data: photos } = await admin
+    .from("photos")
+    .select("storage_path, thumb_path")
+    .eq("event_id", eventId);
+
+  const originals = (photos ?? [])
+    .map((p) => p.storage_path)
+    .filter((s): s is string => Boolean(s));
+  const thumbs = (photos ?? [])
+    .map((p) => p.thumb_path)
+    .filter((s): s is string => Boolean(s));
+
+  // Storage removes are best-effort: a missing/failed object shouldn't block
+  // the DB delete (the row purge is the real "gone"). Chunk to stay under
+  // request-size limits on flooded walls.
+  await removeInChunks(admin, "wall-photos", originals);
+  await removeInChunks(admin, "wall-thumbs", thumbs);
+
+  // Cover image (wall-covers) — one object per event.
+  const { data: ev } = await admin
+    .from("events")
+    .select("cover_image_path")
+    .eq("id", eventId)
+    .maybeSingle();
+  if (ev?.cover_image_path) {
+    try {
+      await admin.storage.from("wall-covers").remove([ev.cover_image_path]);
+    } catch {
+      // best-effort
+    }
+  }
+
+  const { error } = await admin.from("events").delete().eq("id", eventId);
+  return !error;
+}
+
+async function removeInChunks(
+  admin: ReturnType<typeof createAdminClient>,
+  bucket: string,
+  paths: string[],
+) {
+  const CHUNK = 900;
+  for (let i = 0; i < paths.length; i += CHUNK) {
+    const slice = paths.slice(i, i + CHUNK);
+    if (slice.length === 0) continue;
+    try {
+      await admin.storage.from(bucket).remove(slice);
+    } catch {
+      // best-effort — orphaned files are recoverable via a later sweep.
+    }
+  }
+}
+
 export async function setPhotoStatusAdmin(
   photoId: string,
   status: "approved" | "rejected",

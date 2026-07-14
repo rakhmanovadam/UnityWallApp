@@ -14,7 +14,7 @@ export default async function HomePage() {
       <div className="home__top">
         <span className="brandmark brandmark--md home__mark" />
         <h1 className="display home__h">
-          Welcome to <em>UnityWall</em>.
+          Welcome to <em>Unitywalls</em>.
         </h1>
         <p className="lede home__lede">
           A shared photo wall for weddings &amp; events. Three doors — pick the
@@ -33,7 +33,7 @@ export default async function HomePage() {
 
       <Link className="home-tile home-tile--accent" href="/request">
         <span className="kicker kicker--dusk">For venues &amp; planners</span>
-        <div className="home-tile__t">Use UnityWall for your own venue</div>
+        <div className="home-tile__t">Use Unitywalls for your own venue</div>
         <div className="home-tile__d">
           Apply to host. We review every application by hand.
         </div>
@@ -51,7 +51,7 @@ export default async function HomePage() {
 
       <div className="home__foot">
         <span className="brandmark brandmark--xs" />
-        <span>Powered by UnityWall · support@unitywall.co</span>
+        <span>Powered by Unitywalls · support@unitywall.co</span>
       </div>
     </section>
   );

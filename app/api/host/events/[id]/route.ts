@@ -22,7 +22,7 @@ const ParamsSchema = z.object({ id: z.string().uuid() });
 // rejected — a host can't attach another event's cover to their own wall.
 // theme_* fields tint the guest wall. Colors are validated as 6-digit hex so
 // nothing but a safe token can land inside a CSS custom property on the guest
-// page; passing null clears the override back to the default UnityWall theme.
+// page; passing null clears the override back to the default Unitywalls theme.
 // theme_font is one of the fixed preset keys the client knows how to render.
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const hexColor = z

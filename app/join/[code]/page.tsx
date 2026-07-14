@@ -16,7 +16,7 @@ export default async function JoinEventPage({ params }: { params: Params }) {
         <span className="kicker kicker--mute">A shared wall</span>
         <span className="kicker kicker--dusk join__brand">
           <span className="brandmark brandmark--xs" />
-          UnityWall
+          Unitywalls
         </span>
       </div>
 
@@ -70,7 +70,7 @@ export default async function JoinEventPage({ params }: { params: Params }) {
         </Link>
         <div className="powered">
           <span className="brandmark brandmark--xs" />
-          <span>Powered by UnityWall</span>
+          <span>Powered by Unitywalls</span>
         </div>
       </div>
     </section>
