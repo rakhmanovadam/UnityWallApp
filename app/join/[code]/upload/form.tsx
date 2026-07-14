@@ -107,6 +107,9 @@ export default function UploadForm({ code }: { code: string }) {
   // Ids currently being deleted, so the row's Remove button shows progress and
   // can't be double-fired.
   const [removing, setRemoving] = useState<Set<string>>(new Set());
+  // Count of files skipped on the last pick because a same-named file was
+  // already in the queue. Shown as a dismissable notice.
+  const [dupSkipped, setDupSkipped] = useState(0);
 
   // File objects live outside React state — putting them in state would blow
   // out re-renders and set us up for stale-file bugs on retry. The map is
@@ -461,9 +464,20 @@ export default function UploadForm({ code }: { code: string }) {
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
+    // Reject duplicates by filename. Seed the set with every filename already
+    // in the queue (any status), then also dedupe within this same batch — so
+    // picking two files both named adam123.png only keeps the first.
+    const seen = new Set(items.map((it) => it.name.trim().toLowerCase()));
+    let skipped = 0;
     const toEnqueue: UploadItem[] = [];
     for (const file of Array.from(files)) {
       if (!ALLOWED.has(file.type)) continue;
+      const dedupeKey = file.name.trim().toLowerCase();
+      if (seen.has(dedupeKey)) {
+        skipped++;
+        continue;
+      }
+      seen.add(dedupeKey);
       const id = localId();
       if (file.size > MAX_BYTES) {
         toEnqueue.push({
@@ -488,6 +502,7 @@ export default function UploadForm({ code }: { code: string }) {
       });
     }
     setItems((prev) => [...prev, ...toEnqueue]);
+    setDupSkipped(skipped);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -594,6 +609,17 @@ export default function UploadForm({ code }: { code: string }) {
         </span>
         <span className="dropzone__t">Tap to add photos</span>
       </label>
+
+      {dupSkipped > 0 ? (
+        <p
+          className="microcopy"
+          style={{ marginTop: 10, color: "#b8443b" }}
+          role="status"
+        >
+          Skipped {dupSkipped} duplicate{dupSkipped === 1 ? "" : "s"} — a photo
+          with the same file name was already added.
+        </p>
+      ) : null}
 
       {!online ? (
         <p
