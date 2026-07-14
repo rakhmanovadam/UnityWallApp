@@ -368,8 +368,10 @@ a { color: inherit; text-decoration: none; }
   display: inline-block;
   border-radius: 8px;
   flex-shrink: 0;
-  background-image: url("/assets/unitywall-logo.jpeg");
-  background-size: cover;
+  background-color: #fff;
+  background-image: url("/assets/unitywalls-logo.svg");
+  background-size: 74%;
+  background-repeat: no-repeat;
   background-position: center;
   box-shadow: 0 4px 12px rgba(40,56,74,.18);
 }
@@ -379,8 +381,10 @@ a { color: inherit; text-decoration: none; }
 
 .brand-tile {
   width: 54px; height: 54px; border-radius: 13px;
-  background-image: url("/assets/unitywall-logo.jpeg");
-  background-size: cover;
+  background-color: #fff;
+  background-image: url("/assets/unitywalls-logo.svg");
+  background-size: 74%;
+  background-repeat: no-repeat;
   background-position: center;
   box-shadow: 0 6px 18px rgba(40,56,74,.18);
   flex-shrink: 0;

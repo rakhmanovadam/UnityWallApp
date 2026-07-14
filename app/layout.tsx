@@ -12,8 +12,8 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
   },
   icons: {
-    icon: "/assets/unitywall-logo.jpeg",
-    apple: "/assets/unitywall-logo.jpeg",
+    icon: "/assets/unitywalls-logo.svg",
+    apple: "/assets/unitywalls-logo.svg",
   },
 };
 
