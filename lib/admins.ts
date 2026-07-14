@@ -6,10 +6,6 @@ export const SUPER_ADMIN_EMAILS = [
   "adamrakhmanovit@gmail.com",
 ] as const;
 
-// Where new-host applications land. Elijah is the primary admin who triages the
-// application queue.
-export const APPLICATIONS_NOTIFY_EMAIL = "elijah@unitywall.co";
-
 export function isSuperAdmin(email: string | null | undefined): boolean {
   if (!email) return false;
   return (SUPER_ADMIN_EMAILS as readonly string[]).includes(

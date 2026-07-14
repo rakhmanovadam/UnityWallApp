@@ -8,7 +8,7 @@ import {
   applicationNotificationEmail,
   applicationAckEmail,
 } from "@/lib/email/resend";
-import { APPLICATIONS_NOTIFY_EMAIL } from "@/lib/admins";
+import { serverEnv } from "@/lib/env";
 
 const Body = z.object({
   venue: z.string().min(1).max(256),
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       // best-effort
     }
 
+    const env = serverEnv();
     try {
       const tpl = applicationNotificationEmail({
         venue: parsed.data.venue,
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
         notes: parsed.data.notes ?? null,
       });
       await sendEmail({
-        to: APPLICATIONS_NOTIFY_EMAIL,
+        to: env.ADMIN_NOTIFY_EMAIL,
         subject: tpl.subject,
         html: tpl.html,
         text: tpl.text,
