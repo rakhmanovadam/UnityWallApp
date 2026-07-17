@@ -311,6 +311,41 @@ export function downloadReminderEmail(opts: {
   };
 }
 
+// Sent by the retention cron when fresh photos land on a wall that is already
+// more than 30 days old. Hosts have usually stopped checking by then; guests
+// often upload late, unaware the wall closes at delete_after. count is the
+// number of new photos since the last alert.
+export function lateActivityEmail(opts: {
+  venue: string;
+  count: number;
+  deleteOn: string | null; // human date, or null if no delete_after set
+  dashboardUrl: string;
+}) {
+  const n = opts.count;
+  const photos = `${n} new photo${n === 1 ? "" : "s"}`;
+  const closeLine = opts.deleteOn
+    ? ` This wall closes on ${opts.deleteOn}, and every photo is permanently deleted then — download the archive before it does.`
+    : "";
+  return {
+    subject: `${photos} just landed on your Unitywalls`,
+    text: `Hi ${opts.venue},\n\nGuests are still adding to your wall — ${photos} arrived recently, more than 30 days after the event. People often upload late, so it's worth a look.${closeLine}\n\n${opts.dashboardUrl}\n\n— Unitywalls · support@unitywall.co`,
+    html: `
+<!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
+  <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
+    <tr><td>
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#3A5676;">Still coming in</div>
+      <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:8px 0 14px;">${escape(photos)} on your wall</h1>
+      <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">Guests are still adding to <strong>${escape(opts.venue)}</strong> — ${escape(photos)} arrived recently, more than 30 days after the event. People often upload late, so it's worth a look.${opts.deleteOn ? ` This wall closes on <strong>${escape(opts.deleteOn)}</strong> and every photo is permanently deleted then — download the archive before it does.` : ""}</p>
+      <p style="margin:24px 0;text-align:center;">
+        <a href="${escape(opts.dashboardUrl)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">See the new photos</a>
+      </p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
+    </td></tr>
+  </table>
+</body></html>`.trim(),
+  };
+}
+
 function escape(s: string) {
   return s
     .replace(/&/g, "&amp;")

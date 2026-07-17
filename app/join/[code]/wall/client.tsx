@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/browser";
 import type { PhotoListItem } from "@/lib/db/photos";
 import BackLink from "@/app/back-link";
+import ExpiryCountdown from "../expiry-countdown";
 
 type Layout = "mosaic" | "feature" | "grid";
 
@@ -31,12 +32,14 @@ export default function WallClient({
   eventId,
   code,
   coupleDisplay,
+  deleteAfter,
   initialPhotos,
   initialCursor,
 }: {
   eventId: string;
   code: string;
   coupleDisplay: string;
+  deleteAfter: string | null;
   initialPhotos: PhotoListItem[];
   initialCursor: string | null;
 }) {
@@ -146,6 +149,7 @@ export default function WallClient({
             {coupleDisplay}
           </span>
           <div className="wall__title">The Wall</div>
+          <ExpiryCountdown deleteAfter={deleteAfter} className="expiry-pill--wall" />
         </div>
         <span className="badge badge--here">
           <span className="pulse-dot">

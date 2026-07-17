@@ -95,9 +95,24 @@ function formatEta(seconds: number): string {
     : `about ${mins}m left`;
 }
 
-export default function UploadForm({ code }: { code: string }) {
+export default function UploadForm({
+  code,
+  limit,
+  usedInitial = 0,
+}: {
+  code: string;
+  // Per-guest photo cap (events.max_uploads_per_guest). Undefined = unknown,
+  // hide the allowance UI rather than guess.
+  limit?: number;
+  // Photos this guest had already landed before this session, from the server.
+  usedInitial?: number;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [items, setItems] = useState<UploadItem[]>([]);
+  // Count of "done" rows present right after rehydration — those were already
+  // counted in usedInitial (they're prior-session uploads the server knows
+  // about), so they must not be double-counted in the live allowance tally.
+  const baselineDoneRef = useRef(0);
   const [online, setOnline] = useState(true);
   // Smoothed upload throughput (bytes/sec) measured from XHR progress
   // events. EMA keeps the ETA from jumping around on bursty venue Wi-Fi.
@@ -110,6 +125,9 @@ export default function UploadForm({ code }: { code: string }) {
   // Count of files skipped on the last pick because a same-named file was
   // already in the queue. Shown as a dismissable notice.
   const [dupSkipped, setDupSkipped] = useState(0);
+  // Count of files skipped on the last pick because they'd exceed this guest's
+  // per-wall photo allowance.
+  const [limitSkipped, setLimitSkipped] = useState(0);
 
   // File objects live outside React state — putting them in state would blow
   // out re-renders and set us up for stale-file bugs on retry. The map is
@@ -151,6 +169,9 @@ export default function UploadForm({ code }: { code: string }) {
           };
         })
         .slice(0, 200); // keep the UI snappy
+      baselineDoneRef.current = surviving.filter(
+        (r) => r.status === "done",
+      ).length;
       if (surviving.length > 0) setItems(surviving);
     } catch {
       // Corrupt cache; forget it silently rather than blocking the page.
@@ -329,7 +350,9 @@ export default function UploadForm({ code }: { code: string }) {
                     ? "the host closed uploads"
                     : data.error === "event_not_live"
                       ? "wall isn't live"
-                      : "couldn't start upload";
+                      : data.error === "upload_limit_reached"
+                        ? "photo limit reached"
+                        : "couldn't start upload";
           updateItem(item.id, { status: "error", error: reason });
           return;
         }
@@ -469,6 +492,19 @@ export default function UploadForm({ code }: { code: string }) {
     // picking two files both named adam123.png only keeps the first.
     const seen = new Set(items.map((it) => it.name.trim().toLowerCase()));
     let skipped = 0;
+    let overLimit = 0;
+    // Headroom against the per-guest cap: photos the server already knows about
+    // (usedInitial, which includes rehydrated "done" rows) plus everything
+    // still in flight or freshly landed this session (non-error rows beyond the
+    // rehydrated baseline). Undefined/zero limit means no cap.
+    const capped = typeof limit === "number" && limit > 0;
+    const active =
+      items.filter((it) => it.status !== "error").length -
+      baselineDoneRef.current;
+    const effectiveUsed = usedInitial + Math.max(0, active);
+    let headroom = capped
+      ? Math.max(0, (limit as number) - effectiveUsed)
+      : Infinity;
     const toEnqueue: UploadItem[] = [];
     for (const file of Array.from(files)) {
       if (!ALLOWED.has(file.type)) continue;
@@ -480,6 +516,8 @@ export default function UploadForm({ code }: { code: string }) {
       seen.add(dedupeKey);
       const id = localId();
       if (file.size > MAX_BYTES) {
+        // Oversized rows are rejected client-side and never reach storage, so
+        // they don't consume the guest's allowance.
         toEnqueue.push({
           id,
           name: file.name,
@@ -490,6 +528,11 @@ export default function UploadForm({ code }: { code: string }) {
         });
         continue;
       }
+      if (headroom <= 0) {
+        overLimit++;
+        continue;
+      }
+      headroom--;
       const preview = await readPreview(file);
       filesRef.current.set(id, file);
       toEnqueue.push({
@@ -503,6 +546,7 @@ export default function UploadForm({ code }: { code: string }) {
     }
     setItems((prev) => [...prev, ...toEnqueue]);
     setDupSkipped(skipped);
+    setLimitSkipped(overLimit);
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -567,6 +611,14 @@ export default function UploadForm({ code }: { code: string }) {
           : "Uploading";
   const barPct = total ? (done / total) * 100 : 0;
 
+  // Live allowance: photos already on the server (usedInitial) plus what this
+  // session newly landed (done beyond the rehydrated baseline). Clamped ≥0 so
+  // removes can't push it negative mid-render.
+  const hasLimit = typeof limit === "number" && limit > 0;
+  const landed = Math.max(0, usedInitial + (done - baselineDoneRef.current));
+  const remaining = hasLimit ? Math.max(0, (limit as number) - landed) : Infinity;
+  const atLimit = hasLimit && remaining <= 0;
+
   // Time remaining = bytes still to send at the measured throughput, plus a
   // flat finalize allowance per photo that hasn't landed yet. Hidden until
   // the first speed sample exists (nothing to estimate from before that).
@@ -594,7 +646,10 @@ export default function UploadForm({ code }: { code: string }) {
 
   return (
     <>
-      <label className="dropzone" htmlFor="file-input">
+      <label
+        className={"dropzone" + (atLimit ? " dropzone--disabled" : "")}
+        htmlFor="file-input"
+      >
         <input
           id="file-input"
           ref={inputRef}
@@ -602,13 +657,39 @@ export default function UploadForm({ code }: { code: string }) {
           accept="image/*"
           multiple
           hidden
+          disabled={atLimit}
           onChange={(e) => void handleFiles(e.target.files)}
         />
         <span className="dropzone__plus" aria-hidden="true">
           +
         </span>
-        <span className="dropzone__t">Tap to add photos</span>
+        <span className="dropzone__t">
+          {atLimit ? "Photo limit reached" : "Tap to add photos"}
+        </span>
       </label>
+
+      {hasLimit ? (
+        <p
+          className="upload__allowance"
+          role="status"
+          style={atLimit ? { color: "#b8443b" } : undefined}
+        >
+          {atLimit
+            ? `You've reached your ${limit}-photo limit for this wall.`
+            : `${landed} of ${limit} photos used · ${remaining} left`}
+        </p>
+      ) : null}
+
+      {limitSkipped > 0 ? (
+        <p
+          className="microcopy"
+          style={{ marginTop: 10, color: "#b8443b" }}
+          role="status"
+        >
+          Skipped {limitSkipped} photo{limitSkipped === 1 ? "" : "s"} — that
+          would pass your {limit}-photo limit for this wall.
+        </p>
+      ) : null}
 
       {dupSkipped > 0 ? (
         <p

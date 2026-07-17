@@ -17,6 +17,7 @@ export default async function JoinWallPage({ params }: { params: Params }) {
       eventId={event.id}
       code={event.code}
       coupleDisplay={event.couple_display}
+      deleteAfter={event.delete_after}
       initialPhotos={initial.items}
       initialCursor={initial.next_cursor}
     />

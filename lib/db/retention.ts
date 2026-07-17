@@ -1,7 +1,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { PHOTOS_BUCKET, THUMBS_BUCKET } from "@/lib/db/photos";
 import { serverEnv } from "@/lib/env";
-import { sendEmail, downloadReminderEmail } from "@/lib/email/resend";
+import {
+  sendEmail,
+  downloadReminderEmail,
+  lateActivityEmail,
+} from "@/lib/email/resend";
 
 const COVERS_BUCKET = "wall-covers";
 
@@ -104,6 +108,86 @@ async function runReminderTier(
   return { tier: tier.days, sent, failed };
 }
 
+export type LateActivityResult = { alerted: number; failed: number };
+
+// Alerts hosts when fresh photos land on a wall that's already older than 30
+// days. Guests often upload late, unaware the wall closes at delete_after, and
+// hosts have usually stopped checking by then. Only walls with genuinely new
+// photos since the last alert (or the 30-day mark on first pass) get an email;
+// late_activity_notified_at is stamped on each send so a wall isn't re-alerted
+// until MORE photos arrive.
+const THIRTY_DAYS_MS = 30 * DAY_MS;
+
+async function runLateActivityAlerts(
+  admin: ReturnType<typeof createAdminClient>,
+  nowMs: number,
+): Promise<LateActivityResult> {
+  const result: LateActivityResult = { alerted: 0, failed: 0 };
+  const cutoffIso = new Date(nowMs - THIRTY_DAYS_MS).toISOString();
+  const nowIso = new Date(nowMs).toISOString();
+
+  const { data: events, error } = await admin
+    .from("events")
+    .select(
+      "id, couple_display, host_user_id, delete_after, created_at, late_activity_notified_at",
+    )
+    .eq("status", "live")
+    .lte("created_at", cutoffIso);
+
+  // A missing late_activity_notified_at column (migration not yet applied) or
+  // any query error just means no alerts this run — never crash the cron.
+  if (error || !events) return result;
+
+  const env = serverEnv();
+  const dashboardUrl = `${env.APP_BASE_URL.replace(/\/$/, "")}/dashboard`;
+
+  for (const ev of events) {
+    // Count photos uploaded since the last alert; on the first pass fall back
+    // to a 24h window so only genuinely recent late activity triggers an email
+    // (not the wall's entire back-catalogue).
+    const since =
+      (ev.late_activity_notified_at as string | null) ??
+      new Date(nowMs - DAY_MS).toISOString();
+    const { count } = await admin
+      .from("photos")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", ev.id)
+      .gt("uploaded_at", since);
+    if (!count || count <= 0) continue;
+
+    const to = await hostEmail(admin, ev.host_user_id);
+    if (to) {
+      try {
+        const tpl = lateActivityEmail({
+          venue: ev.couple_display,
+          count,
+          deleteOn: ev.delete_after
+            ? formatDate(ev.delete_after as string)
+            : null,
+          dashboardUrl,
+        });
+        await sendEmail({
+          to,
+          subject: tpl.subject,
+          html: tpl.html,
+          text: tpl.text,
+        });
+        result.alerted++;
+      } catch {
+        result.failed++;
+      }
+    }
+    // Stamp regardless of send outcome so an owner-less or bouncing wall isn't
+    // retried against the same photos every day.
+    await admin
+      .from("events")
+      .update({ late_activity_notified_at: nowIso })
+      .eq("id", ev.id);
+  }
+
+  return result;
+}
+
 export type PurgeResult = {
   eventsPurged: number;
   photosDeleted: number;
@@ -188,6 +272,7 @@ async function runPurge(
 
 export type RetentionRunResult = {
   reminders: ReminderResult[];
+  lateActivity: LateActivityResult;
   purge: PurgeResult;
 };
 
@@ -199,6 +284,7 @@ export async function runRetention(nowMs: number): Promise<RetentionRunResult> {
   for (const tier of REMINDER_TIERS) {
     reminders.push(await runReminderTier(admin, tier, nowMs));
   }
+  const lateActivity = await runLateActivityAlerts(admin, nowMs);
   const purge = await runPurge(admin, nowMs);
-  return { reminders, purge };
+  return { reminders, lateActivity, purge };
 }

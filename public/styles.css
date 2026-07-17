@@ -963,15 +963,57 @@ a { color: inherit; text-decoration: none; }
   flex: 0 0 auto;
 }
 
-/* Host-uploaded venue banner shown above the upload heading. */
+/* Host-uploaded venue banner shown above the upload heading. Kept modest on
+   mobile so the venue branding doesn't dwarf the page heading below it. */
 .upload__banner {
   display: block;
   width: 100%;
-  max-height: 180px;
+  max-height: 120px;
   object-fit: cover;
   border-radius: var(--r-card);
   border: 1px solid var(--hair);
   margin-bottom: 16px;
+}
+@media (min-width: 760px) {
+  .upload__banner { max-height: 180px; }
+}
+
+/* "This room expires in X days Y hours" pill. */
+.expiry-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  margin-top: 12px;
+  font: 600 12px/1 var(--font-sans);
+  letter-spacing: .01em;
+  color: var(--dusk);
+  background: var(--paper-2);
+  border: 1px solid var(--hair-3);
+  border-radius: 999px;
+  padding: 7px 13px;
+}
+.expiry-pill__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+}
+.expiry-pill--wall {
+  margin-top: 6px;
+  font-size: 11px;
+  padding: 5px 10px;
+}
+
+/* Per-guest photo allowance readout under the dropzone. */
+.upload__allowance {
+  margin: 10px 0 0;
+  font: 600 13px/1.4 var(--font-sans);
+  color: var(--dusk);
+}
+.dropzone--disabled {
+  opacity: .55;
+  cursor: not-allowed;
 }
 .uprow {
   display: flex;
