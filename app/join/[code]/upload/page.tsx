@@ -51,7 +51,7 @@ export default async function JoinUploadPage({ params }: { params: Params }) {
           list now flows straight into the button and the page scrolls. */}
       <div style={{ height: 28, flex: "0 0 auto" }} />
       <Link
-        className="btn btn--secondary"
+        className="btn btn--secondary btn--lg"
         href={`/join/${encodeURIComponent(event.code)}/wall`}
       >
         View the wall
