@@ -72,7 +72,26 @@ export default async function JoinEventPage({ params }: { params: Params }) {
         </Link>
         <div className="powered">
           <span className="brandmark brandmark--xs" />
-          <span>Powered by Unitywalls</span>
+          <span>
+            Built by{" "}
+            <a
+              className="ulink"
+              href="https://www.linkedin.com/in/adamrakhmanov/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Adam Rakhmanov
+            </a>
+            {" · "}
+            <a
+              className="ulink"
+              href="https://unitywall.co"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Powered by UnityWall
+            </a>
+          </span>
         </div>
       </div>
     </section>

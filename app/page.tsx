@@ -59,7 +59,27 @@ export default async function HomePage() {
 
       <div className="home__foot">
         <span className="brandmark brandmark--xs" />
-        <span>Powered by Unitywalls · support@unitywall.co</span>
+        <span>
+          Built by{" "}
+          <a
+            className="ulink"
+            href="https://www.linkedin.com/in/adamrakhmanov/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Adam Rakhmanov
+          </a>
+          {" · "}
+          <a
+            className="ulink"
+            href="https://unitywall.co"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Powered by UnityWall
+          </a>
+          {" · connect@unitywall.co"}
+        </span>
       </div>
     </section>
   );

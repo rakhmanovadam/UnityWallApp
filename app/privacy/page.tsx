@@ -75,8 +75,8 @@ export default function PrivacyPage() {
         <p>
           You can opt out of marketing updates at any time. To request deletion
           of your data, or with any privacy question, email{" "}
-          <a className="ulink" href="mailto:support@unitywall.co">
-            support@unitywall.co
+          <a className="ulink" href="mailto:connect@unitywall.co">
+            connect@unitywall.co
           </a>
           .
         </p>

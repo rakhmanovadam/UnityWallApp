@@ -89,8 +89,8 @@ export default function TermsPage() {
         <h2>8. Contact</h2>
         <p>
           Questions? Email{" "}
-          <a className="ulink" href="mailto:support@unitywall.co">
-            support@unitywall.co
+          <a className="ulink" href="mailto:connect@unitywall.co">
+            connect@unitywall.co
           </a>
           .
         </p>

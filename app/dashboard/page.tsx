@@ -42,7 +42,7 @@ export default async function DashboardPage() {
         <h1 className="display display--med">No events yet</h1>
         <p className="lede">
           Your application is approved but no event has been provisioned. Reach
-          out at support@unitywall.co and we&apos;ll spin one up.
+          out at connect@unitywall.co and we&apos;ll spin one up.
         </p>
         <p className="microcopy">Signed in as {host.email}</p>
       </section>

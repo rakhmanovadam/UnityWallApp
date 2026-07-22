@@ -84,7 +84,14 @@ export default function WelcomeClient({
       <header className="ob__bar">
         <div className="ob__brand">
           <span className="brandmark brandmark--xs" />
-          <span className="kicker kicker--mute">Powered by Unitywalls</span>
+          <a
+            className="kicker kicker--mute"
+            href="https://unitywall.co"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Powered by UnityWall
+          </a>
         </div>
         <Link
           href={`/join/${encodeURIComponent(code)}/upload`}
@@ -253,7 +260,7 @@ export default function WelcomeClient({
         </form>
 
         <p className="microcopy center">
-          Prefer to talk? <strong>support@unitywall.co</strong> · (615) 424-3176
+          Prefer to talk? <strong>connect@unitywall.co</strong> · (615) 424-3176
         </p>
       </article>
     </section>

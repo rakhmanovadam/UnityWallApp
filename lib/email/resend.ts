@@ -245,7 +245,7 @@ export function applicationDeclineEmail(opts: {
     : "";
   return {
     subject: "About your Unitywalls application",
-    text: `Hi ${firstName},\n\nThanks for taking the time to apply with ${opts.venue}. After a careful look we aren't able to move ${opts.venue} forward as a Unitywalls host at this time.${reasonText}\n\nYou're welcome to reapply once anything changes — reply to this email if you'd like to talk it through.\n\n— Unitywalls · support@unitywall.co`,
+    text: `Hi ${firstName},\n\nThanks for taking the time to apply with ${opts.venue}. After a careful look we aren't able to move ${opts.venue} forward as a Unitywalls host at this time.${reasonText}\n\nYou're welcome to reapply once anything changes — reply to this email if you'd like to talk it through.\n\n— Unitywalls · connect@unitywall.co`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
@@ -255,7 +255,7 @@ export function applicationDeclineEmail(opts: {
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">We aren't able to move <strong>${escape(opts.venue)}</strong> forward as a Unitywalls host at this time.</p>
       ${reasonBlock}
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">You're welcome to reapply once anything changes — hit reply if you'd like to talk it through.</p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · connect@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
@@ -273,7 +273,7 @@ export function applicationAckEmail(opts: { venue: string }) {
       <h1 style="font-family:'Playfair Display',Georgia,serif;font-size:22px;margin:0 0 16px;">We received your application</h1>
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">Thanks for applying with <strong>${escape(opts.venue)}</strong>. We read every one by hand, usually within a day.</p>
       <p style="font-size:15px;line-height:1.55;color:#444;margin:0 0 14px;">We'll email you the moment you're approved, with your dashboard and a QR for your tables.</p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · connect@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
@@ -293,7 +293,7 @@ export function downloadReminderEmail(opts: {
     subject: urgent
       ? `Last chance — your Unitywalls closes in ${opts.daysLeft} days`
       : `Your Unitywalls closes in ${opts.daysLeft} days`,
-    text: `Hi ${opts.venue},\n\nYour Unitywalls closes on ${opts.deleteOn} (${opts.daysLeft} days from now). When it closes the wall goes offline and every photo is permanently deleted. Download the full-resolution archive from your dashboard before then — once purged we can't recover them.\n\n${opts.dashboardUrl}\n\n— Unitywalls · support@unitywall.co`,
+    text: `Hi ${opts.venue},\n\nYour Unitywalls closes on ${opts.deleteOn} (${opts.daysLeft} days from now). When it closes the wall goes offline and every photo is permanently deleted. Download the full-resolution archive from your dashboard before then — once purged we can't recover them.\n\n${opts.dashboardUrl}\n\n— Unitywalls · connect@unitywall.co`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
@@ -304,7 +304,7 @@ export function downloadReminderEmail(opts: {
       <p style="margin:24px 0;text-align:center;">
         <a href="${escape(opts.dashboardUrl)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">Download my photos</a>
       </p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · connect@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
@@ -328,7 +328,7 @@ export function lateActivityEmail(opts: {
     : "";
   return {
     subject: `${photos} just landed on your Unitywalls`,
-    text: `Hi ${opts.venue},\n\nGuests are still adding to your wall — ${photos} arrived recently, more than 30 days after the event. People often upload late, so it's worth a look.${closeLine}\n\n${opts.dashboardUrl}\n\n— Unitywalls · support@unitywall.co`,
+    text: `Hi ${opts.venue},\n\nGuests are still adding to your wall — ${photos} arrived recently, more than 30 days after the event. People often upload late, so it's worth a look.${closeLine}\n\n${opts.dashboardUrl}\n\n— Unitywalls · connect@unitywall.co`,
     html: `
 <!doctype html><html><body style="font-family:Helvetica,Arial,sans-serif;background:#FAF7F2;padding:24px;">
   <table style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:32px;">
@@ -339,7 +339,7 @@ export function lateActivityEmail(opts: {
       <p style="margin:24px 0;text-align:center;">
         <a href="${escape(opts.dashboardUrl)}" style="display:inline-block;background:#222;color:#fff;padding:14px 24px;border-radius:10px;text-decoration:none;font-weight:600;">See the new photos</a>
       </p>
-      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · support@unitywall.co</p>
+      <p style="font-size:13px;color:#888;margin:24px 0 0;">— Unitywalls · connect@unitywall.co</p>
     </td></tr>
   </table>
 </body></html>`.trim(),
